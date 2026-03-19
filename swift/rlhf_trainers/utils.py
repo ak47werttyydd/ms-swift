@@ -13,7 +13,6 @@ from dataclasses import asdict
 from datetime import timedelta
 from functools import partial
 from io import BytesIO
-from msgspec import field
 from packaging import version
 from peft.tuners import lora
 from peft.tuners.lora import LoraLayer
@@ -39,6 +38,7 @@ T = TypeVar('T')
 _ipv6_patch_applied = False
 
 if is_vllm_available():
+    from msgspec import field
     from vllm.lora.request import LoRARequest
 
     class TensorLoRARequest(LoRARequest):

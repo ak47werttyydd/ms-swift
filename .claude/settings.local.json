@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pip show:*)",
+      "WebFetch(domain:swift.readthedocs.io)",
+      "Bash(find /home/a84400789/ms-swift/examples -name *gkd* -o -name *kd*)",
+      "Bash(chmod:*)"
+    ]
+  }
+}

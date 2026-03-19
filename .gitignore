@@ -118,7 +118,6 @@ venv.bak/
 *.whl
 *.tar.gz
 *.swp
-*.log
 *.tar.gz
 source.sh
 tensorboard.sh
@@ -153,3 +152,6 @@ megatron_output/
 
 # ast template
 ast_index_file.py
+
+# student model
+Qwen3_5-0.8B-A0.1B-student/

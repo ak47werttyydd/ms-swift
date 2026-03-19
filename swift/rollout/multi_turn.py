@@ -3,9 +3,10 @@
 import asyncio
 from abc import ABC
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from swift.infer_engine import GRPOVllmEngine
+if TYPE_CHECKING:
+    from swift.infer_engine import GRPOVllmEngine
 from swift.infer_engine.protocol import (ChatCompletionResponse, ChatCompletionResponseChoice, RequestConfig,
                                          RolloutInferRequest, RolloutOutput)
 from swift.template import Messages
@@ -15,7 +16,7 @@ from .gym_env import ContextManager, Env, context_managers, envs
 
 class RolloutScheduler(ABC):
     # Single Turn Rollout Scheduler
-    def __init__(self, infer_engine: Optional[GRPOVllmEngine] = None, max_turns: Optional[int] = None, *args, **kwargs):
+    def __init__(self, infer_engine: Optional['GRPOVllmEngine'] = None, max_turns: Optional[int] = None, *args, **kwargs):
         self.infer_engine = infer_engine
         # Tokenizer can be passed explicitly (e.g., in colocate mode where infer_engine may be None)
         self._tokenizer = kwargs.get('tokenizer', None)
@@ -681,7 +682,7 @@ class MathTipsScheduler(MultiTurnScheduler):
 
 class GYMScheduler(RolloutScheduler):
 
-    def __init__(self, infer_engine: GRPOVllmEngine, max_turns: Optional[int] = None, **kwargs):
+    def __init__(self, infer_engine: 'GRPOVllmEngine', max_turns: Optional[int] = None, **kwargs):
         super().__init__(infer_engine, max_turns, **kwargs)
         self.gym_env_name = kwargs.get('gym_env', None)
         self.context_manager_name = kwargs.get('context_manager', None)
