@@ -1,0 +1,45 @@
+# docker-compose.yml for ms-swift KD Training
+#
+# Usage:
+#   docker-compose up -d KD
+#   docker exec -it kd bash
+#   docker-compose down KD
+
+# ----- Shared config -----
+x-common: &common
+  image: daal/ms-swift:v0
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+  ipc: host
+  ulimits:
+    memlock: -1
+    stack: 67108864
+  network_mode: host
+  environment: &common-env
+    - NGPU=8
+    - CUDA_DEVICE_ORDER=PCI_BUS_ID
+    - NCCL_DEBUG=WARN
+    - HF_HOME=/dev/shm/HF_HOME
+    - MODELSCOPE_CACHE=/dev/shm/ms_cache
+    - WANDB_API_KEY=${WANDB_API_KEY:-}
+    - MASTER_ADDR=${MASTER_ADDR:-localhost}
+    - MASTER_PORT=${MASTER_PORT:-29500}
+  volumes:
+    - /home:/home
+    - /dev/shm:/dev/shm
+  working_dir: /home
+  stdin_open: true
+  tty: true
+  restart: unless-stopped
+  command: /bin/bash
+
+services:
+  KD:
+    <<: *common
+    container_name: kd
+    entrypoint: /home/a84400789/ms-swift/docker/entrypoint.sh
