@@ -1,0 +1,50 @@
+# GKD (Generalized Knowledge Distillation): Qwen3.5-0.8B-A0.1B (student) <- Qwen3.5-0.8B (teacher)
+# Student: custom MoE model, ~0.8B total / ~0.1B active, randomly initialised
+# Teacher: pretrained Qwen3.5-0.8B
+# GPU 2,3 (NPROC_PER_NODE=2), ZeRO-3, full tuner, only LM backbone trained
+#
+# Step 1 – create the student model (run once):
+#   python create_student_model.py --base_model Qwen/Qwen3.5-0.8B \
+#                                  --output_dir ./Qwen3_5-0.8B-A0.1B-student
+# Step 2 – run this script:
+#   bash gkd_qwen3_5_0.8b.sh |& tee gkd_qwen3_5_0.8b.log
+
+STUDENT_MODEL=./Qwen3_5-0.8B-A0.1B-student
+
+NPROC_PER_NODE=2 \                          # number of GPUs per node
+CUDA_VISIBLE_DEVICES=2,3 \                  # which physical GPUs to use
+PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \  # reduce CUDA memory fragmentation
+swift rlhf \
+    --rlhf_type gkd \                       # use Generalized Knowledge Distillation algorithm
+    --model "$STUDENT_MODEL" \              # student model path
+    --model_type qwen3_5_moe \             # swift model type for Qwen3.5-MoE VLM loader/template
+    --teacher_model Qwen/Qwen3.5-0.8B \    # pretrained teacher model (hub ID or local path), please see https://huggingface.co/collections/Qwen/qwen35
+    --teacher_deepspeed zero3 \            # shard teacher weights across GPUs with ZeRO-3. If zero3 doesn't fit, try zero2
+    --tuner_type full \                    # full-parameter fine-tuning (no LoRA). 
+    --freeze_vit true \                    # freeze vision tower (non-language module)
+    --freeze_aligner true \               # freeze vision-language aligner (non-language module)
+    --freeze_llm false \                   # keep language model backbone trainable
+    --dataset 'AI-ModelScope/alpaca-gpt4-data-zh#2000' \  # training dataset (Chinese, 2000 samples)
+    --split_dataset_ratio 0.01 \           # use 1% of data as validation set
+    --torch_dtype bfloat16 \              # model weight dtype (BF16 for H100)
+    --num_train_epochs 1 \                 # number of full passes over the dataset
+    --per_device_train_batch_size 2 \      # batch size per GPU during training
+    --per_device_eval_batch_size 2 \       # batch size per GPU during evaluation
+    --gradient_accumulation_steps 4 \     # accumulate gradients over 4 steps before update
+    --learning_rate 1e-5 \                 # peak learning rate
+    --warmup_ratio 0.05 \                  # fraction of steps used for LR warm-up
+    --max_length 2048 \                    # maximum total sequence length (prompt + response)
+    --max_completion_length 512 \          # maximum tokens to generate in on-policy mode
+    # --lmbda 0.0 \                          # 0.0 = off-policy only (use dataset labels, no student generation)
+    --lmbda 1.0 \                          # 1.0 = on-policy only (use student-generated responses, no dataset labels)
+    --eval_steps 50 \                      # run evaluation every N optimizer steps
+    --save_steps 50 \                      # save checkpoint every N optimizer steps
+    --save_total_limit 2 \                 # keep only the 2 most recent checkpoints
+    --logging_steps 5 \                    # log metrics every N steps
+    --save_only_model true \              # save model weights only (skip optimizer/scheduler state)
+    --output_dir output/gkd_qwen3_5_0.8b_a0.1b \  # directory for checkpoints and logs
+    --deepspeed zero3 \                    # ZeRO stage-3: shard student model params + gradients + optimizer. If zero3 doesn't fit, try zero2
+    --attn_impl flash_attn \              # use FlashAttention kernel for memory-efficient attention
+    # --attn_impl spda \                    # use Spatially-Partitioned Attention (SPDA) for better scaling on long sequences (alternative to flash_attn, choose based on your GPU and sequence length)
+    --dataloader_num_workers 4 \           # number of CPU workers for data loading
+    --dataset_num_proc 4                   # number of CPU processes for dataset preprocessing

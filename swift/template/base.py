@@ -2096,14 +2096,19 @@ class Template(ProcessorMixin):
         video_grid_thw = inputs.get('video_grid_thw')
         dtype = visual.dtype
         if pixel_values is None and pixel_values_videos is None:  # plain-text
-            images = [Image.new('RGB', (32, 32), (0, 0, 0))]
-            media_inputs = processor.image_processor(images=images, return_tensors='pt')
-            media_inputs = to_device(media_inputs, input_ids.device)
-            pixel_values = media_inputs['pixel_values'].type(dtype)
-            image_embeds = visual(pixel_values, grid_thw=media_inputs['image_grid_thw'])
-            if hasattr(image_embeds, 'pooler_output'):
-                image_embeds = image_embeds.pooler_output
-            inputs_embeds = inputs_embeds + image_embeds.mean().to(device=inputs_embeds.device) * 0.
+            # Dummy visual pass (contribution = 0) ensures vision tower params participate
+            # in the ZeRO-3 computation graph. Skip entirely when vision tower is frozen,
+            # since frozen params need no gradients and require no graph participation.
+            visual_has_trainable = any(p.requires_grad for p in visual.parameters())
+            if visual_has_trainable:
+                images = [Image.new('RGB', (32, 32), (0, 0, 0))]
+                media_inputs = processor.image_processor(images=images, return_tensors='pt')
+                media_inputs = to_device(media_inputs, input_ids.device)
+                pixel_values = media_inputs['pixel_values'].type(dtype)
+                image_embeds = visual(pixel_values, grid_thw=media_inputs['image_grid_thw'])
+                if hasattr(image_embeds, 'pooler_output'):
+                    image_embeds = image_embeds.pooler_output
+                inputs_embeds = inputs_embeds + image_embeds.mean().to(device=inputs_embeds.device) * 0.
         else:
             if pixel_values is None:
                 pixel_values_mixed = pixel_values_videos
