@@ -57,7 +57,6 @@ COMMON_ARGS=(
     --save_only_model true
     --deepspeed zero2
     --attn_impl flash_attn
-    --dataloader_num_workers 4
     --dataset_num_proc 8
     --streaming true
     --gradient_checkpointing true

@@ -25,10 +25,14 @@
 #   Phase 1 (seq_kd, lmbda=0.0, ~70B tokens): Mode 2 sequential KD — teacher
 #            generates completions; student learns from teacher-sampled sequences.
 #            First half of off-policy data (49 files). Avoids Arrow cache bloat.
+#            [ original dataset | teacher sample  ]
 #   Phase 2 (lmbda=0.0, ~70B tokens): Mode 3 offline KD — dataset text as
 #            response, teacher provides logprob supervision. Second half (49 files).
+#             [ original dataset ] 
 #   Phase 3 (lmbda=0.3, ~40B tokens): mixed on/off-policy
+#             [ original dataset (| 50% of student sample) ] 
 #   Phase 4 (lmbda=1.0, ~30B tokens): full on-policy, reduce exposure bias
+#             [ original dataset | student sample ] 
 #
 # Token budget:
 #   Phase 1-2: 6 GPUs, bs=4, grad_accum=21, avg ~4k tokens/sample
