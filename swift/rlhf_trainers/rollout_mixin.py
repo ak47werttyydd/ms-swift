@@ -1522,7 +1522,8 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
                           mode: Optional[str] = None):
         original_max_length = template.max_length
         original_mode = template.mode
-        template.max_length = max_length
+        if max_length is not None:
+            template.max_length = max_length
         if mode is not None:
             template.set_mode(mode)
         forward_ctx = template.forward_context(self.model, inputs) if inputs is not None else nullcontext()
