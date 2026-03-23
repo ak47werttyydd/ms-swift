@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Claude environment
+echo 'export PATH=$PATH:/home/ubuntu/.local/bin' >> ~/.bashrc
+
 # ── Install ms-swift (editable, from host-mounted source) ────────────────────
 echo "=== Installing ms-swift (editable) ==="
 pip install -e /home/a84400789/ms-swift/
@@ -15,6 +18,9 @@ pip install -U "transformers>=5.3.0"
 # KD 训练不需要 torchao 量化，直接卸载即可。
 echo "=== Removing incompatible torchao (vLLM dev build, broken with torch 2.10.0+cu128) ==="
 pip uninstall -y torchao || true
+
+# ── Pre-create triton cache dirs (deepspeed/triton checks these at import time) ─
+mkdir -p /root/.triton/autotune
 
 # ── Verify key packages ───────────────────────────────────────────────────────
 echo "=== Verifying packages ==="

@@ -15,6 +15,7 @@ x-common: &common
           - driver: nvidia
             count: all
             capabilities: [gpu]
+  pid: host
   ipc: host
   ulimits:
     memlock: -1
@@ -23,7 +24,13 @@ x-common: &common
   environment: &common-env
     - NGPU=8
     - CUDA_DEVICE_ORDER=PCI_BUS_ID
-    - NCCL_DEBUG=WARN
+    - NVIDIA_REQUIRE_IMEX_CHANNELS=1
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility     # training needed CUDA capability
+    - NCCL_DEBUG=WARN 
+    - NCCL_ASYNC_ERROR_HANDLING=1   # report hangs as errors, not silent blocks                                                                                          
+    - NCCL_TIMEOUT=1800             # 30min timeout before NCCL raises an error                                                                                          
+    - NCCL_P2P_DISABLE=0            # keep NVSwitch P2P enabled (don't fall back)                                                                                        
+    - NCCL_SHM_DISABLE=0            # keep SHM path enabled  
     - HF_HOME=/dev/shm/HF_HOME
     - MODELSCOPE_CACHE=/dev/shm/ms_cache
     - WANDB_API_KEY=${WANDB_API_KEY:-}
