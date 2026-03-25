@@ -156,7 +156,7 @@ swift infer \
     # T=1.0 preserves the teacher's natural output distribution.
     # Lowering temperature sharpens the distribution (less diverse outputs);
     # raising it softens it.  T=1.0 is the GKD paper default and matches
-    # Phase 1 of gkd_qwen35_vllm.sh.
+    # Phase 1 of gkd_qwen35_vllm.sh. 
     --temperature 1.0 \
     \
     # BF16: same dtype as training.  Using FP16 here while training in BF16

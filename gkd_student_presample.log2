@@ -1,0 +1,845 @@
+Using pre-sampled data: output/presample_test.jsonl (169 lines)
+=== Student training on pre-sampled data ===
+    Student:  /home/r00914194/PruneMe/qwen35_exp80_layer_drop_082331
+    Dataset:  output/presample_test.jsonl
+    GPUs:     4,5,6,7 (4 processes)
+run sh: `/usr/bin/python3 -m torch.distributed.run --nproc_per_node 4 --master_port 29500 --master_addr localhost /home/a84400789/ms-swift/swift/cli/rlhf.py --rlhf_type gkd --model_type qwen3_5_moe --model /home/r00914194/PruneMe/qwen35_exp80_layer_drop_082331 --teacher_model /home/r00914194/models/Qwen3.5-35B-A3B --dataset output/presample_test.jsonl --seq_kd false --lmbda 0.0 --beta 0.5 --gkd_logits_topk 20 --train_type full --freeze_vit true --freeze_aligner true --freeze_llm false --torch_dtype bfloat16 --temperature 1.0 --max_length 8192 --truncation_strategy right --warmup_ratio 0.05 --per_device_train_batch_size 1 --gradient_accumulation_steps 42 --learning_rate 1e-5 --num_train_epochs 1 --save_steps 10 --save_only_model true --deepspeed zero2 --attn_impl flash_attn --dataloader_num_workers 4 --dataset_num_proc 8 --enable_thinking false --logging_steps 10 --load_from_cache_file true --padding_free true --output_dir output/presample_student_test`
+
+*****************************************
+Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+*****************************************
+[INFO:swift] Successfully registered `/home/a84400789/ms-swift/swift/dataset/data/dataset_info.json`.
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+`torch_dtype` is deprecated! Use `dtype` instead!
+[WARNING:swift] `train_type` is deprecated, please use `tuner_type` instead.
+[INFO:swift] rank: 0, local_rank: 0, world_size: 4, local_world_size: 4
+`torch_dtype` is deprecated! Use `dtype` instead!
+[WARNING:swift] Please install the package: `pip install "decord" -U`.
+[INFO:swift] Setting args.lazy_tokenize: True
+[INFO:swift] freeze_parameters: ['model.visual', 'model.visual.merger']
+<string>:228: FutureWarning: The `GKDConfig` is now located in `trl.experimental`. Please update your imports to `from trl.experimental.gkd import GKDConfig`. The current import path will be removed and no longer supported in TRL 0.29. For more information, see https://github.com/huggingface/trl/issues/4223.
+warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+[INFO:swift] Using deepspeed: {'fp16': {'enabled': 'auto', 'loss_scale': 0, 'loss_scale_window': 1000, 'initial_scale_power': 16, 'hysteresis': 2, 'min_loss_scale': 1}, 'bf16': {'enabled': 'auto'}, 'zero_optimization': {'stage': 2, 'offload_optimizer': {'device': 'none', 'pin_memory': True}, 'allgather_partitions': True, 'allgather_bucket_size': 200000000.0, 'overlap_comm': False, 'reduce_scatter': True, 'reduce_bucket_size': 200000000.0, 'contiguous_gradients': True}, 'gradient_accumulation_steps': 'auto', 'gradient_clipping': 'auto', 'steps_per_print': 2000, 'train_batch_size': 'auto', 'train_micro_batch_size_per_gpu': 'auto', 'wall_clock_breakdown': False}
+<string>:228: FutureWarning: The `GKDConfig` is now located in `trl.experimental`. Please update your imports to `from trl.experimental.gkd import GKDConfig`. The current import path will be removed and no longer supported in TRL 0.29. For more information, see https://github.com/huggingface/trl/issues/4223.
+warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+<string>:228: FutureWarning: The `GKDConfig` is now located in `trl.experimental`. Please update your imports to `from trl.experimental.gkd import GKDConfig`. The current import path will be removed and no longer supported in TRL 0.29. For more information, see https://github.com/huggingface/trl/issues/4223.
+warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+<string>:228: FutureWarning: The `GKDConfig` is now located in `trl.experimental`. Please update your imports to `from trl.experimental.gkd import GKDConfig`. The current import path will be removed and no longer supported in TRL 0.29. For more information, see https://github.com/huggingface/trl/issues/4223.
+warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+NCCL version 2.27.5+cuda12.9
+[INFO:swift] output_dir: /home/a84400789/ms-swift/output/presample_student_test/v6-20260324-204751
+[INFO:swift] args: RLHFArguments(
+acc_strategy=token,
+accelerator_config={'dispatch_batches': False},
+adalora_beta1=0.85,
+adalora_beta2=0.85,
+adalora_deltaT=1,
+adalora_init_r=12,
+adalora_orth_reg_weight=0.5,
+adalora_target_r=8,
+adalora_tfinal=0,
+adalora_tinit=0,
+adam_beta1=0.9,
+adam_beta2=0.95,
+adam_epsilon=1e-08,
+adapter_act=gelu,
+adapter_length=128,
+adapters=[],
+add_non_thinking_prefix=True,
+add_version=True,
+advantage_estimator=grpo,
+agent_template=None,
+aligner_lr=None,
+async_generate=False,
+attn_impl=flash_attn,
+auto_find_batch_size=False,
+average_tokens_across_devices=True,
+batch_eval_metrics=False,
+beta=0.5,
+bf16=True,
+bf16_full_eval=False,
+bnb_4bit_compute_dtype=torch.bfloat16,
+bnb_4bit_quant_storage=None,
+bnb_4bit_quant_type=nf4,
+bnb_4bit_use_double_quant=True,
+boft_block_num=0,
+boft_block_size=4,
+boft_dropout=0.0,
+boft_n_butterfly_factor=1,
+cached_dataset=[],
+cached_val_dataset=[],
+callbacks=[],
+center_rewards_coefficient=None,
+check_model=True,
+chord_enable_phi_function=False,
+chord_mu_decay_steps=None,
+chord_mu_peak=None,
+chord_mu_valley=None,
+chord_mu_warmup_steps=None,
+chord_sft_dataset=[],
+chord_sft_per_device_train_batch_size=None,
+cliprange=0.2,
+cliprange_value=0.2,
+columns={},
+completion_length_limit_scope=per_round,
+cosine_max_len=None,
+cosine_max_len_value_correct=0.5,
+cosine_max_len_value_wrong=0.0,
+cosine_min_len_value_correct=1.0,
+cosine_min_len_value_wrong=-0.5,
+cpo_alpha=1.0,
+create_checkpoint_symlink=False,
+custom_dataset_info=[],
+custom_register_path=[],
+data_seed=42,
+dataloader_drop_last=False,
+dataloader_num_workers=4,
+dataloader_persistent_workers=False,
+dataloader_pin_memory=True,
+dataloader_prefetch_factor=None,
+dataset=['output/presample_test.jsonl'],
+dataset_num_proc=8,
+dataset_shuffle=True,
+ddp_backend=None,
+ddp_broadcast_buffers=None,
+ddp_bucket_cap_mb=None,
+ddp_find_unused_parameters=None,
+ddp_timeout=18000000,
+debug=None,
+deepspeed={'fp16': {'enabled': 'auto', 'loss_scale': 0, 'loss_scale_window': 1000, 'initial_scale_power': 16, 'hysteresis': 2, 'min_loss_scale': 1}, 'bf16': {'enabled': 'auto'}, 'zero_optimization': {'stage': 2, 'offload_optimizer': {'device': 'none', 'pin_memory': True}, 'allgather_partitions': True, 'allgather_bucket_size': 200000000.0, 'overlap_comm': False, 'reduce_scatter': True, 'reduce_bucket_size': 200000000.0, 'contiguous_gradients': True}, 'gradient_accumulation_steps': 'auto', 'gradient_clipping': 'auto', 'steps_per_print': 2000, 'train_batch_size': 'auto', 'train_micro_batch_size_per_gpu': 'auto', 'wall_clock_breakdown': False},
+deepspeed_autotp_size=None,
+delta=None,
+desirable_weight=1.0,
+device_groups=None,
+device_map=None,
+disable_tqdm=None,
+discopop_tau=0.05,
+do_eval=False,
+do_predict=False,
+do_train=False,
+download_mode=reuse_dataset_if_exists,
+ds3_gather_for_generation=True,
+dynamic_sample=False,
+early_stop_interval=None,
+enable_channel_loss=False,
+enable_dft_loss=False,
+enable_flattened_weight_sync=True,
+enable_jit_checkpoint=False,
+enable_thinking=False,
+epsilon=0.2,
+epsilon_high=None,
+eval_accumulation_steps=None,
+eval_dataset=[],
+eval_dataset_args=None,
+eval_delay=0,
+eval_do_concat_batches=True,
+eval_generation_config=None,
+eval_limit=None,
+eval_metric=None,
+eval_on_start=False,
+eval_steps=10.0,
+eval_strategy=no,
+eval_use_evalscope=False,
+eval_use_gather_object=False,
+experts_impl=None,
+external_plugins=[],
+extra_eval_args=None,
+fourier_n_frequency=2000,
+fourier_scaling=300.0,
+fp16=False,
+fp16_full_eval=False,
+freeze_aligner=True,
+freeze_llm=False,
+freeze_parameters=['model.visual', 'model.visual.merger'],
+freeze_parameters_ratio=0.0,
+freeze_parameters_regex=None,
+freeze_vit=True,
+fsdp=[],
+fsdp_config=None,
+full_determinism=False,
+galore_cos_threshold=0.4,
+galore_gamma_proj=2,
+galore_optim_per_parameter=False,
+galore_proj_bits=4,
+galore_proj_group_size=256,
+galore_proj_quant=False,
+galore_proj_type=std,
+galore_quantization=False,
+galore_queue_size=5,
+galore_rank=128,
+galore_scale=1.0,
+galore_target_modules=None,
+galore_update_proj_gap=50,
+galore_with_embedding=False,
+gamma=1.0,
+generation_batch_size=None,
+generation_config=None,
+generation_max_length=None,
+generation_num_beams=None,
+gkd_logits_topk=20,
+gradient_accumulation_steps=42,
+gradient_checkpointing=True,
+gradient_checkpointing_kwargs=None,
+greater_is_better=False,
+group_by_length=False,
+hqq_axis=None,
+hub_always_push=False,
+hub_model_id=None,
+hub_private_repo=None,
+hub_revision=None,
+hub_strategy=every_save,
+hub_token=<HUB_TOKEN>,
+ignore_args_error=False,
+ignore_data_skip=False,
+importance_sampling_level=token,
+include_for_metrics=[],
+include_num_input_tokens_seen=False,
+init_strategy=None,
+init_weights=True,
+interleave_prob=None,
+kl_coef=0.05,
+kl_in_reward=None,
+label_names=None,
+label_smoothing=0,
+label_smoothing_factor=0.0,
+lam=0.95,
+lazy_tokenize=True,
+ld_alpha=None,
+learning_rate=1e-05,
+length_column_name=length,
+liger_kernel_config=None,
+lisa_activated_layers=0,
+lisa_step_interval=20,
+llamapro_num_groups=None,
+llamapro_num_new_blocks=4,
+lmbda=0.0,
+load_args=False,
+load_best_model_at_end=False,
+load_data_args=False,
+load_from_cache_file=True,
+local_rank=0,
+local_repo_path=None,
+local_rollout_forward_batch_size=64,
+log_completions=False,
+log_entropy=False,
+log_level=passive,
+log_level_replica=warning,
+log_on_each_node=True,
+log_rollout_offpolicy_metrics=False,
+logging_dir=/home/a84400789/ms-swift/output/presample_student_test/v6-20260324-204751/runs,
+logging_first_step=True,
+logging_nan_inf_filter=True,
+logging_steps=10,
+logging_strategy=steps,
+logprobs=False,
+lora_alpha=32,
+lora_bias=none,
+lora_dropout=0.05,
+lora_dtype=None,
+lora_ga_batch_size=2,
+lora_ga_direction=ArB2r,
+lora_ga_iters=2,
+lora_ga_max_length=1024,
+lora_ga_scale=stable,
+lora_ga_stable_gamma=16,
+lora_rank=8,
+lorap_lr_ratio=None,
+loss_scale=last_round,
+loss_type=None,
+loss_weights=None,
+lr_scheduler_kwargs=None,
+lr_scheduler_type=cosine,
+max_completion_length=512,
+max_epochs=None,
+max_grad_norm=1.0,
+max_length=8192,
+max_memory={},
+max_model_len=None,
+max_new_tokens=512,
+max_pixels=None,
+max_resample_times=3,
+max_shard_size=5GB,
+max_steps=-1,
+max_turns=None,
+metric_for_best_model=loss,
+missing_eos_penalty=None,
+model=/home/r00914194/PruneMe/qwen35_exp80_layer_drop_082331,
+model_author=None,
+model_kwargs={},
+model_name=None,
+model_revision=None,
+model_type=qwen3_5_moe,
+modules_to_save=[],
+move_model_batches=None,
+multi_turn_scheduler=None,
+neftune_noise_alpha=None,
+new_special_tokens=[],
+norm_bbox=None,
+num_beams=1,
+num_generations=8,
+num_generations_eval=None,
+num_iterations=1,
+num_labels=None,
+num_mini_batches=1,
+num_ppo_epochs=4,
+num_sample_generations=10,
+num_train_epochs=1.0,
+off_policy_sequence_mask_delta=None,
+offload_model=False,
+offload_optimizer=False,
+offload_teacher_model=False,
+optim=adamw_torch_fused,
+optim_args=None,
+optim_target_modules=None,
+optimizer=None,
+output_dir=/home/a84400789/ms-swift/output/presample_student_test/v6-20260324-204751,
+overlong_filter=False,
+packing=False,
+packing_length=None,
+packing_num_proc=1,
+padding_free=True,
+padding_side=left,
+parallelism_config=None,
+per_device_eval_batch_size=1,
+per_device_train_batch_size=1,
+predict_with_generate=False,
+prediction_loss_only=False,
+problem_type=None,
+project=huggingface,
+push_to_hub=False,
+quant_bits=None,
+quant_method=None,
+ray_exp_name=None,
+ref_adapters=[],
+ref_model=None,
+ref_model_mixup_alpha=0.6,
+ref_model_revision=None,
+ref_model_sync_steps=512,
+ref_model_type=None,
+reft_args=None,
+reft_intervention_type=LoreftIntervention,
+reft_layer_key=None,
+reft_layers=None,
+reft_rank=4,
+remove_unused_columns=True,
+repetition_max_penalty=-1.0,
+repetition_n_grams=3,
+repetition_penalty=1.0,
+report_to=['tensorboard'],
+response_length=512,
+response_prefix=None,
+restore_callback_states_from_checkpoint=False,
+resume_from_checkpoint=None,
+resume_only_model=False,
+reward_adapters=[],
+reward_funcs=[],
+reward_model=None,
+reward_model_plugin=None,
+reward_model_revision=None,
+reward_model_type=None,
+reward_weights=None,
+rlhf_type=gkd,
+rollout_importance_sampling_mode=None,
+rollout_importance_sampling_threshold=2.0,
+rope_scaling=None,
+router_aux_loss_coef=0.0,
+rpo_alpha=None,
+run_name=/home/a84400789/ms-swift/output/presample_student_test/v6-20260324-204751,
+safe_serialization=True,
+save_on_each_node=False,
+save_only_model=True,
+save_steps=10.0,
+save_strategy=steps,
+save_total_limit=None,
+scale_rewards=None,
+seed=42,
+seq_kd=False,
+sequence_parallel_size=1,
+sft_alpha=0,
+shuffle_buffer_size=1000,
+simpo_gamma=1,
+skip_memory_metrics=True,
+sleep_level=0,
+soft_cache_length=None,
+soft_max_length=None,
+sortish_sampler=False,
+split_dataset_ratio=0.0,
+steps_per_generation=None,
+stop_words=[],
+stopping_strategy=first_exhausted,
+stream=False,
+streaming=False,
+strict=False,
+structured_outputs_regex=None,
+swanlab_email_language=zh,
+swanlab_exp_name=None,
+swanlab_mode=cloud,
+swanlab_notification_method=None,
+swanlab_project=ms-swift,
+swanlab_receiver_email=None,
+swanlab_secret=None,
+swanlab_sender_email=None,
+swanlab_smtp_port=None,
+swanlab_smtp_server=None,
+swanlab_token=<SWANLAB_TOKEN>,
+swanlab_webhook_url=None,
+swanlab_workspace=None,
+sync_ref_model=False,
+system=None,
+target_modules=['all-linear'],
+target_parameters=None,
+target_regex=None,
+task_type=causal_lm,
+tau_neg=1.05,
+tau_pos=1.0,
+teacher_adapters=[],
+teacher_deepspeed=None,
+teacher_model=/home/r00914194/models/Qwen3.5-35B-A3B,
+teacher_model_revision=None,
+teacher_model_server=None,
+teacher_model_type=None,
+temperature=1.0,
+template=qwen3_5,
+template_backend=swift,
+tf32=None,
+top_entropy_quantile=1.0,
+top_k=50,
+top_logprobs=None,
+top_p=0.9,
+torch_compile=False,
+torch_compile_backend=None,
+torch_compile_mode=None,
+torch_dtype=torch.bfloat16,
+torch_empty_cache_steps=None,
+trackio_space_id=trackio,
+train_dataloader_shuffle=True,
+train_sampling_strategy=random,
+train_type=full,
+trainable_parameters=[],
+trainable_parameters_regex=None,
+truncation_strategy=right,
+tuner_backend=peft,
+tuner_type=full,
+undesirable_weight=1.0,
+use_cache=False,
+use_chat_template=True,
+use_cpu=False,
+use_dora=False,
+use_flash_ckpt=False,
+use_galore=False,
+use_hf=False,
+use_liger_kernel=False,
+use_logits_to_keep=None,
+use_ray=False,
+use_rslora=False,
+use_swift_lora=False,
+use_vllm=False,
+val_dataset=[],
+val_dataset_shuffle=False,
+vera_d_initial=0.1,
+vera_dropout=0.0,
+vera_projection_prng_key=0,
+vera_rank=256,
+vf_coef=0.1,
+vit_gradient_checkpointing=None,
+vit_lr=None,
+vllm_data_parallel_size=1,
+vllm_disable_cascade_attn=False,
+vllm_disable_custom_all_reduce=True,
+vllm_enable_expert_parallel=False,
+vllm_enable_lora=False,
+vllm_enable_prefix_caching=True,
+vllm_enforce_eager=False,
+vllm_engine_kwargs={},
+vllm_gpu_memory_utilization=0.9,
+vllm_limit_mm_per_prompt=None,
+vllm_max_lora_rank=16,
+vllm_max_model_len=None,
+vllm_max_num_seqs=None,
+vllm_mm_processor_cache_gb=None,
+vllm_mode=None,
+vllm_pipeline_parallel_size=1,
+vllm_quantization=None,
+vllm_reasoning_parser=None,
+vllm_server_base_url=None,
+vllm_server_group_port=None,
+vllm_server_host=None,
+vllm_server_pass_dataset=False,
+vllm_server_port=[8000],
+vllm_server_timeout=240.0,
+vllm_speculative_config=None,
+vllm_tensor_parallel_size=1,
+vllm_use_async_engine=None,
+wandb_log_unique_prompts=None,
+warmup_ratio=0.05,
+warmup_steps=0,
+weight_decay=0.1,
+whiten_rewards=False,
+zero_hpz_partition_size=None,
+)
+[INFO:swift] Global seed set to 42
+[INFO:swift] Setting torch_dtype: torch.bfloat16
+[WARNING:swift] Please install the package: `pip install "decord" -U`.
+[WARNING:swift] Please install the package: `pip install "decord" -U`.
+[INFO:swift] model_kwargs: {'device_map': 'cuda:0', 'dtype': torch.bfloat16}
+[INFO:swift] attn_impl: flash_attn
+[INFO:swift] Setting max_ratio: 200. You can adjust this hyperparameter through the environment variable: `MAX_RATIO`.
+[INFO:swift] Setting frame_factor: 2. You can adjust this hyperparameter through the environment variable: `FRAME_FACTOR`.
+[INFO:swift] Setting fps: 2.0. You can adjust this hyperparameter through the environment variable: `FPS`.
+[INFO:swift] Setting fps_min_frames: 4. You can adjust this hyperparameter through the environment variable: `FPS_MIN_FRAMES`.
+[INFO:swift] Setting fps_max_frames: 768. You can adjust this hyperparameter through the environment variable: `FPS_MAX_FRAMES`.
+[INFO:swift] Setting image_max_token_num: 16384. You can adjust this hyperparameter through the environment variable: `IMAGE_MAX_TOKEN_NUM`.
+[INFO:swift] Setting image_min_token_num: 4. You can adjust this hyperparameter through the environment variable: `IMAGE_MIN_TOKEN_NUM`.
+[INFO:swift] Setting spatial_merge_size: 2. You can adjust this hyperparameter through the environment variable: `SPATIAL_MERGE_SIZE`.
+[INFO:swift] Setting video_max_token_num: 768. You can adjust this hyperparameter through the environment variable: `VIDEO_MAX_TOKEN_NUM`.
+[INFO:swift] Setting video_min_token_num: 128. You can adjust this hyperparameter through the environment variable: `VIDEO_MIN_TOKEN_NUM`.
+Loading weights:   0%|          | 0/1026 [00:00<?, ?it/s]Loading weights:   0%|          | 0/1026 [00:00<?, ?it/s]Loading weights:   0%|          | 0/1026 [00:00<?, ?it/s]Loading weights:   0%|          | 0/1026 [00:00<?, ?it/s]Loading weights:   0%|          | 2/1026 [00:00<01:39, 10.33it/s]Loading weights:   0%|          | 2/1026 [00:00<01:38, 10.37it/s]Loading weights:   0%|          | 2/1026 [00:00<02:15,  7.56it/s]Loading weights:   0%|          | 2/1026 [00:00<02:07,  8.01it/s]Loading weights:   1%|▏         | 13/1026 [00:00<00:23, 43.18it/s]Loading weights:   1%|          | 12/1026 [00:00<00:26, 37.57it/s]Loading weights:   1%|▏         | 14/1026 [00:00<00:31, 31.80it/s]Loading weights:   1%|▏         | 14/1026 [00:00<00:31, 32.28it/s]Loading weights:   3%|▎         | 31/1026 [00:00<00:15, 65.74it/s]Loading weights:   3%|▎         | 31/1026 [00:00<00:14, 66.46it/s]Loading weights:   2%|▏         | 18/1026 [00:00<00:29, 33.79it/s]Loading weights:   2%|▏         | 20/1026 [00:00<00:26, 38.66it/s]Loading weights:   3%|▎         | 31/1026 [00:00<00:17, 55.62it/s]Loading weights:   3%|▎         | 31/1026 [00:00<00:18, 54.43it/s]Loading weights:   4%|▍         | 40/1026 [00:00<00:16, 58.32it/s]Loading weights:   4%|▍         | 40/1026 [00:00<00:16, 58.69it/s]Loading weights:   5%|▍         | 49/1026 [00:00<00:14, 65.54it/s]Loading weights:   5%|▍         | 49/1026 [00:00<00:14, 65.87it/s]Loading weights:   4%|▎         | 38/1026 [00:00<00:21, 45.26it/s]Loading weights:   4%|▎         | 38/1026 [00:00<00:22, 44.51it/s]Loading weights:   5%|▍         | 49/1026 [00:01<00:17, 56.97it/s]Loading weights:   5%|▍         | 49/1026 [00:01<00:17, 56.48it/s]Loading weights:   6%|▌         | 57/1026 [00:01<00:17, 56.68it/s]Loading weights:   6%|▌         | 57/1026 [00:01<00:20, 47.76it/s]Loading weights:   5%|▌         | 56/1026 [00:01<00:20, 47.23it/s]Loading weights:   5%|▌         | 56/1026 [00:01<00:20, 46.90it/s]Loading weights:   6%|▌         | 64/1026 [00:01<00:21, 45.14it/s]Loading weights:   6%|▌         | 64/1026 [00:01<00:22, 42.96it/s]Loading weights:   8%|▊         | 82/1026 [00:01<00:14, 67.06it/s]Loading weights:   8%|▊         | 82/1026 [00:01<00:13, 69.62it/s]Loading weights:   6%|▌         | 62/1026 [00:01<00:28, 34.05it/s]Loading weights:   6%|▌         | 62/1026 [00:01<00:28, 34.23it/s]Loading weights:   9%|▉         | 91/1026 [00:01<00:15, 60.03it/s]Loading weights:   9%|▉         | 91/1026 [00:01<00:15, 61.50it/s]Loading weights:   8%|▊         | 82/1026 [00:01<00:15, 59.84it/s]Loading weights:   8%|▊         | 81/1026 [00:01<00:16, 57.81it/s]Loading weights:  10%|▉         | 100/1026 [00:01<00:13, 66.59it/s]Loading weights:  10%|▉         | 100/1026 [00:01<00:14, 65.26it/s]Loading weights:   9%|▊         | 89/1026 [00:01<00:18, 51.34it/s]Loading weights:   9%|▉         | 91/1026 [00:01<00:17, 54.00it/s]Loading weights:  11%|█         | 108/1026 [00:01<00:16, 57.06it/s]Loading weights:  11%|█         | 108/1026 [00:01<00:15, 57.77it/s]Loading weights:  10%|▉         | 100/1026 [00:02<00:15, 59.88it/s]Loading weights:  10%|▉         | 100/1026 [00:02<00:15, 58.47it/s]Loading weights:  12%|█▏        | 118/1026 [00:02<00:13, 66.00it/s]Loading weights:  12%|█▏        | 118/1026 [00:02<00:13, 65.34it/s]Loading weights:  12%|█▏        | 126/1026 [00:02<00:15, 57.09it/s]Loading weights:  12%|█▏        | 126/1026 [00:02<00:15, 57.44it/s]Loading weights:  11%|█         | 108/1026 [00:02<00:17, 52.26it/s]Loading weights:  11%|█         | 108/1026 [00:02<00:17, 51.35it/s]Loading weights:  12%|█▏        | 118/1026 [00:02<00:14, 61.08it/s]Loading weights:  13%|█▎        | 133/1026 [00:02<00:18, 48.98it/s]Loading weights:  13%|█▎        | 133/1026 [00:02<00:18, 48.65it/s]Loading weights:  12%|█▏        | 118/1026 [00:02<00:20, 45.09it/s]Loading weights:  12%|█▏        | 126/1026 [00:02<00:16, 55.72it/s]Loading weights:  15%|█▍        | 151/1026 [00:02<00:11, 74.19it/s]Loading weights:  15%|█▍        | 151/1026 [00:02<00:11, 73.99it/s]Loading weights:  12%|█▏        | 126/1026 [00:02<00:20, 43.34it/s]Loading weights:  16%|█▌        | 161/1026 [00:02<00:13, 66.22it/s]Loading weights:  16%|█▌        | 161/1026 [00:02<00:13, 66.09it/s]Loading weights:  13%|█▎        | 131/1026 [00:02<00:20, 43.95it/s]Loading weights:  16%|█▋        | 169/1026 [00:02<00:12, 68.09it/s]Loading weights:  16%|█▋        | 169/1026 [00:02<00:12, 68.16it/s]Loading weights:  13%|█▎        | 133/1026 [00:02<00:21, 40.80it/s]Loading weights:  15%|█▍        | 151/1026 [00:02<00:14, 61.61it/s]Loading weights:  15%|█▍        | 151/1026 [00:02<00:12, 70.24it/s]Loading weights:  17%|█▋        | 177/1026 [00:03<00:14, 59.15it/s]Loading weights:  17%|█▋        | 177/1026 [00:03<00:14, 58.82it/s]Loading weights:  16%|█▌        | 160/1026 [00:03<00:14, 60.09it/s]Loading weights:  15%|█▌        | 159/1026 [00:03<00:16, 53.51it/s]Loading weights:  16%|█▋        | 169/1026 [00:03<00:14, 59.74it/s]Loading weights:  16%|█▋        | 169/1026 [00:03<00:13, 63.35it/s]Loading weights:  18%|█▊        | 188/1026 [00:03<00:16, 50.94it/s]Loading weights:  18%|█▊        | 188/1026 [00:03<00:16, 50.89it/s]Loading weights:  19%|█▉        | 197/1026 [00:03<00:17, 48.31it/s]Loading weights:  17%|█▋        | 177/1026 [00:03<00:15, 53.94it/s]Loading weights:  17%|█▋        | 177/1026 [00:03<00:16, 51.94it/s]Loading weights:  19%|█▉        | 196/1026 [00:03<00:17, 46.23it/s]Loading weights:  21%|██▏       | 220/1026 [00:03<00:10, 79.83it/s]Loading weights:  21%|██▏       | 220/1026 [00:03<00:10, 79.01it/s]Loading weights:  18%|█▊        | 187/1026 [00:03<00:13, 60.50it/s]Loading weights:  18%|█▊        | 187/1026 [00:03<00:14, 58.74it/s]Loading weights:  23%|██▎       | 231/1026 [00:03<00:11, 72.12it/s]Loading weights:  23%|██▎       | 231/1026 [00:03<00:11, 71.58it/s]Loading weights:  19%|█▉        | 194/1026 [00:03<00:16, 49.47it/s]Loading weights:  19%|█▉        | 194/1026 [00:03<00:16, 50.39it/s]Loading weights:  23%|██▎       | 240/1026 [00:04<00:14, 54.71it/s]Loading weights:  23%|██▎       | 241/1026 [00:04<00:13, 56.38it/s]Loading weights:  19%|█▉        | 200/1026 [00:04<00:21, 39.23it/s]Loading weights:  19%|█▉        | 200/1026 [00:04<00:21, 38.78it/s]Loading weights:  21%|██▏       | 219/1026 [00:04<00:12, 63.02it/s]Loading weights:  25%|██▌       | 257/1026 [00:04<00:12, 61.14it/s]Loading weights:  25%|██▍       | 256/1026 [00:04<00:12, 59.33it/s]Loading weights:  22%|██▏       | 228/1026 [00:04<00:13, 59.28it/s]Loading weights:  21%|██▏       | 220/1026 [00:04<00:16, 49.92it/s]Loading weights:  23%|██▎       | 237/1026 [00:04<00:11, 68.17it/s]Loading weights:  26%|██▌       | 266/1026 [00:04<00:14, 52.86it/s]Loading weights:  26%|██▌       | 266/1026 [00:04<00:14, 53.56it/s]Loading weights:  23%|██▎       | 237/1026 [00:04<00:16, 48.55it/s]Loading weights:  24%|██▍       | 246/1026 [00:04<00:12, 63.12it/s]Loading weights:  28%|██▊       | 289/1026 [00:04<00:09, 78.95it/s]Loading weights:  28%|██▊       | 289/1026 [00:04<00:09, 79.57it/s]Loading weights:  25%|██▍       | 256/1026 [00:04<00:11, 68.96it/s]Loading weights:  25%|██▍       | 256/1026 [00:04<00:10, 70.60it/s]Loading weights:  29%|██▉       | 300/1026 [00:04<00:09, 73.58it/s]Loading weights:  29%|██▉       | 300/1026 [00:04<00:09, 73.11it/s]Loading weights:  30%|███       | 309/1026 [00:05<00:11, 62.83it/s]Loading weights:  30%|███       | 309/1026 [00:05<00:11, 62.22it/s]Loading weights:  26%|██▌       | 266/1026 [00:05<00:17, 43.99it/s]Loading weights:  26%|██▌       | 265/1026 [00:05<00:18, 40.66it/s]Loading weights:  32%|███▏      | 325/1026 [00:05<00:10, 65.90it/s]Loading weights:  32%|███▏      | 326/1026 [00:05<00:10, 67.17it/s]Loading weights:  28%|██▊       | 289/1026 [00:05<00:11, 66.92it/s]Loading weights:  28%|██▊       | 289/1026 [00:05<00:11, 66.28it/s]Loading weights:  33%|███▎      | 335/1026 [00:05<00:12, 55.29it/s]Loading weights:  33%|███▎      | 335/1026 [00:05<00:12, 55.30it/s]Loading weights:  29%|██▉       | 300/1026 [00:05<00:11, 65.13it/s]Loading weights:  29%|██▉       | 300/1026 [00:05<00:11, 65.14it/s]Loading weights:  35%|███▍      | 358/1026 [00:05<00:08, 80.63it/s]Loading weights:  35%|███▍      | 358/1026 [00:05<00:08, 80.50it/s]Loading weights:  36%|███▌      | 369/1026 [00:05<00:08, 73.93it/s]Loading weights:  36%|███▌      | 369/1026 [00:05<00:08, 73.99it/s]Loading weights:  30%|███       | 309/1026 [00:05<00:14, 49.95it/s]Loading weights:  30%|███       | 310/1026 [00:05<00:13, 51.42it/s]Loading weights:  31%|███       | 318/1026 [00:06<00:13, 51.53it/s]Loading weights:  31%|███       | 320/1026 [00:06<00:14, 49.78it/s]Loading weights:  32%|███▏      | 325/1026 [00:06<00:18, 37.40it/s]Loading weights:  37%|███▋      | 378/1026 [00:06<00:18, 35.62it/s]Loading weights:  37%|███▋      | 378/1026 [00:06<00:18, 35.56it/s]Loading weights:  32%|███▏      | 327/1026 [00:06<00:21, 32.02it/s]Loading weights:  32%|███▏      | 331/1026 [00:06<00:19, 34.98it/s]Loading weights:  38%|███▊      | 394/1026 [00:06<00:13, 48.37it/s]Loading weights:  38%|███▊      | 394/1026 [00:06<00:13, 48.38it/s]Loading weights:  33%|███▎      | 334/1026 [00:06<00:19, 35.96it/s]Loading weights:  33%|███▎      | 336/1026 [00:06<00:24, 28.19it/s]Loading weights:  33%|███▎      | 340/1026 [00:07<00:20, 34.05it/s]Loading weights:  39%|███▉      | 403/1026 [00:07<00:14, 43.14it/s]Loading weights:  39%|███▉      | 403/1026 [00:07<00:14, 43.15it/s]Loading weights:  35%|███▍      | 358/1026 [00:07<00:12, 53.83it/s]Loading weights:  35%|███▍      | 358/1026 [00:07<00:12, 52.46it/s]Loading weights:  40%|████      | 411/1026 [00:07<00:14, 43.00it/s]Loading weights:  40%|████      | 411/1026 [00:07<00:14, 42.98it/s]Loading weights:  36%|███▌      | 366/1026 [00:07<00:13, 48.84it/s]Loading weights:  36%|███▌      | 366/1026 [00:07<00:13, 48.16it/s]Loading weights:  37%|███▋      | 376/1026 [00:07<00:11, 57.25it/s]Loading weights:  42%|████▏     | 428/1026 [00:07<00:12, 48.28it/s]Loading weights:  42%|████▏     | 428/1026 [00:07<00:12, 48.28it/s]Loading weights:  37%|███▋      | 375/1026 [00:07<00:15, 42.64it/s]Loading weights:  37%|███▋      | 384/1026 [00:07<00:11, 53.62it/s]Loading weights:  43%|████▎     | 445/1026 [00:07<00:08, 64.71it/s]Loading weights:  43%|████▎     | 445/1026 [00:07<00:08, 64.73it/s]Loading weights:  38%|███▊      | 394/1026 [00:07<00:09, 63.57it/s]Loading weights:  38%|███▊      | 393/1026 [00:07<00:10, 58.85it/s]Loading weights:  44%|████▍     | 455/1026 [00:07<00:09, 61.50it/s]Loading weights:  44%|████▍     | 455/1026 [00:07<00:09, 61.51it/s]Loading weights:  39%|███▉      | 400/1026 [00:07<00:12, 51.17it/s]Loading weights:  39%|███▉      | 403/1026 [00:08<00:12, 51.35it/s]Loading weights:  45%|████▌     | 463/1026 [00:08<00:10, 53.17it/s]Loading weights:  45%|████▌     | 463/1026 [00:08<00:10, 52.95it/s]Loading weights:  40%|███▉      | 406/1026 [00:08<00:15, 38.77it/s]Loading weights:  40%|████      | 411/1026 [00:08<00:12, 48.88it/s]Loading weights:  46%|████▌     | 472/1026 [00:08<00:11, 49.78it/s]Loading weights:  46%|████▌     | 473/1026 [00:08<00:10, 51.22it/s]Loading weights:  42%|████▏     | 427/1026 [00:08<00:09, 64.37it/s]Loading weights:  42%|████▏     | 427/1026 [00:08<00:09, 65.38it/s]Loading weights:  48%|████▊     | 496/1026 [00:08<00:06, 79.08it/s]Loading weights:  48%|████▊     | 496/1026 [00:08<00:06, 78.66it/s]Loading weights:  42%|████▏     | 436/1026 [00:08<00:10, 57.66it/s]Loading weights:  42%|████▏     | 436/1026 [00:08<00:10, 57.17it/s]Loading weights:  49%|████▉     | 507/1026 [00:08<00:07, 72.20it/s]Loading weights:  49%|████▉     | 507/1026 [00:08<00:07, 72.17it/s]Loading weights:  43%|████▎     | 445/1026 [00:08<00:09, 63.11it/s]Loading weights:  43%|████▎     | 445/1026 [00:08<00:12, 47.67it/s]Loading weights:  44%|████▍     | 453/1026 [00:08<00:10, 57.29it/s]Loading weights:  50%|█████     | 516/1026 [00:08<00:09, 56.47it/s]Loading weights:  50%|█████     | 516/1026 [00:08<00:09, 56.21it/s]Loading weights:  45%|████▌     | 463/1026 [00:08<00:08, 67.08it/s]Loading weights:  45%|████▌     | 463/1026 [00:08<00:08, 63.80it/s]Loading weights:  52%|█████▏    | 531/1026 [00:08<00:06, 71.14it/s]Loading weights:  52%|█████▏    | 531/1026 [00:08<00:06, 70.93it/s]Loading weights:  46%|████▌     | 471/1026 [00:09<00:10, 54.30it/s]Loading weights:  53%|█████▎    | 541/1026 [00:09<00:08, 56.44it/s]Loading weights:  53%|█████▎    | 541/1026 [00:09<00:08, 56.55it/s]Loading weights:  46%|████▌     | 472/1026 [00:09<00:10, 51.84it/s]Loading weights:  47%|████▋     | 479/1026 [00:09<00:11, 48.73it/s]Loading weights:  54%|█████▎    | 549/1026 [00:09<00:09, 52.54it/s]Loading weights:  54%|█████▎    | 549/1026 [00:09<00:09, 52.62it/s]Loading weights:  47%|████▋     | 478/1026 [00:09<00:12, 42.31it/s]Loading weights:  48%|████▊     | 496/1026 [00:09<00:08, 64.55it/s]Loading weights:  55%|█████▌    | 565/1026 [00:09<00:06, 68.98it/s]Loading weights:  55%|█████▌    | 565/1026 [00:09<00:06, 68.90it/s]Loading weights:  56%|█████▌    | 574/1026 [00:09<00:06, 65.63it/s]Loading weights:  56%|█████▌    | 574/1026 [00:09<00:06, 65.47it/s]Loading weights:  49%|████▉     | 505/1026 [00:09<00:08, 60.24it/s]Loading weights:  48%|████▊     | 496/1026 [00:09<00:10, 51.58it/s]Loading weights:  57%|█████▋    | 583/1026 [00:09<00:06, 70.04it/s]Loading weights:  57%|█████▋    | 583/1026 [00:09<00:06, 70.16it/s]Loading weights:  50%|█████     | 514/1026 [00:09<00:07, 69.20it/s]Loading weights:  50%|█████     | 514/1026 [00:09<00:08, 63.55it/s]Loading weights:  58%|█████▊    | 592/1026 [00:10<00:07, 61.74it/s]Loading weights:  58%|█████▊    | 592/1026 [00:10<00:07, 61.13it/s]Loading weights:  51%|█████     | 523/1026 [00:10<00:08, 62.21it/s]Loading weights:  51%|█████     | 522/1026 [00:10<00:09, 55.51it/s]Loading weights:  52%|█████▏    | 532/1026 [00:10<00:07, 64.79it/s]Loading weights:  52%|█████▏    | 532/1026 [00:10<00:07, 61.97it/s]Loading weights:  59%|█████▊    | 602/1026 [00:10<00:08, 50.98it/s]Loading weights:  59%|█████▊    | 602/1026 [00:10<00:08, 50.91it/s]Loading weights:  53%|█████▎    | 539/1026 [00:10<00:09, 51.07it/s]Loading weights:  53%|█████▎    | 540/1026 [00:10<00:10, 47.10it/s]Loading weights:  60%|█████▉    | 611/1026 [00:10<00:09, 43.16it/s]Loading weights:  60%|█████▉    | 611/1026 [00:10<00:09, 43.18it/s]Loading weights:  62%|██████▏   | 634/1026 [00:10<00:05, 70.60it/s]Loading weights:  62%|██████▏   | 633/1026 [00:10<00:05, 68.89it/s]Loading weights:  53%|█████▎    | 546/1026 [00:10<00:11, 41.82it/s]Loading weights:  53%|█████▎    | 545/1026 [00:10<00:13, 36.83it/s]Loading weights:  55%|█████▌    | 565/1026 [00:10<00:07, 60.80it/s]Loading weights:  55%|█████▌    | 565/1026 [00:10<00:07, 63.11it/s]Loading weights:  63%|██████▎   | 642/1026 [00:10<00:06, 63.64it/s]Loading weights:  63%|██████▎   | 644/1026 [00:10<00:05, 66.19it/s]Loading weights:  56%|█████▌    | 573/1026 [00:11<00:08, 52.97it/s]Loading weights:  56%|█████▌    | 573/1026 [00:11<00:08, 54.54it/s]Loading weights:  64%|██████▎   | 653/1026 [00:11<00:06, 57.42it/s]Loading weights:  64%|██████▎   | 652/1026 [00:11<00:06, 56.95it/s]Loading weights:  57%|█████▋    | 583/1026 [00:11<00:07, 60.66it/s]Loading weights:  57%|█████▋    | 583/1026 [00:11<00:07, 59.41it/s]Loading weights:  65%|██████▌   | 670/1026 [00:11<00:04, 76.86it/s]Loading weights:  58%|█████▊    | 591/1026 [00:11<00:08, 51.93it/s]Loading weights:  58%|█████▊    | 591/1026 [00:11<00:08, 52.74it/s]Loading weights:  65%|██████▌   | 671/1026 [00:11<00:05, 61.42it/s]Loading weights:  66%|██████▌   | 679/1026 [00:12<00:10, 33.69it/s]Loading weights:  59%|█████▊    | 601/1026 [00:12<00:14, 29.48it/s]Loading weights:  59%|█████▉    | 606/1026 [00:12<00:14, 29.19it/s]Loading weights:  59%|█████▊    | 601/1026 [00:12<00:16, 25.65it/s]Loading weights:  66%|██████▋   | 680/1026 [00:12<00:12, 28.14it/s]Loading weights:  67%|██████▋   | 685/1026 [00:12<00:10, 32.75it/s]Loading weights:  59%|█████▉    | 610/1026 [00:12<00:13, 31.82it/s]Loading weights:  88%|████████▊ | 898/1026 [00:12<00:00, 221.21it/s]Loading weights:  88%|████████▊ | 903/1026 [00:12<00:00, 291.91it/s]Loading weights: 100%|██████████| 1026/1026 [00:12<00:00, 82.57it/s]
+Loading weights: 100%|██████████| 1026/1026 [00:12<00:00, 82.58it/s]
+Loading weights:  60%|█████▉    | 611/1026 [00:12<00:16, 24.78it/s]Loading weights:  60%|██████    | 616/1026 [00:12<00:13, 30.99it/s]Loading weights:  62%|██████▏   | 634/1026 [00:12<00:07, 49.65it/s]Loading weights:  62%|██████▏   | 631/1026 [00:12<00:08, 45.51it/s]Loading weights:  62%|██████▏   | 639/1026 [00:12<00:08, 43.63it/s]Loading weights:  63%|██████▎   | 642/1026 [00:12<00:08, 46.34it/s]Loading weights:  64%|██████▎   | 652/1026 [00:12<00:06, 54.54it/s][WARNING:swift] Please install the package: `pip install "decord" -U`.
+[INFO:swift] model_kwargs: {'device_map': 'cuda:0', 'dtype': torch.bfloat16}
+[INFO:swift] attn_impl: flash_attn
+Loading weights:  64%|██████▍   | 660/1026 [00:13<00:07, 52.21it/s]Loading weights:  64%|██████▎   | 652/1026 [00:13<00:08, 44.44it/s]Loading weights:  65%|██████▌   | 670/1026 [00:13<00:05, 63.27it/s]Loading weights:  65%|██████▌   | 669/1026 [00:13<00:06, 57.21it/s]Loading weights:  66%|██████▌   | 676/1026 [00:13<00:07, 49.80it/s]Loading weights:  66%|██████▌   | 679/1026 [00:13<00:06, 50.62it/s]Loading weights:  66%|██████▋   | 682/1026 [00:13<00:08, 38.83it/s]Loading weights:  67%|██████▋   | 687/1026 [00:13<00:06, 49.30it/s]Loading weights:  86%|████████▌ | 879/1026 [00:13<00:00, 374.89it/s]Loading weights:  87%|████████▋ | 889/1026 [00:13<00:00, 373.65it/s]Loading weights: 100%|██████████| 1026/1026 [00:13<00:00, 73.62it/s]Loading weights: 100%|██████████| 1026/1026 [00:13<00:00, 73.71it/s]
+
+Loading weights:   0%|          | 0/555 [00:00<?, ?it/s]Loading weights:   0%|          | 0/555 [00:00<?, ?it/s]Loading weights:   2%|▏         | 13/555 [00:00<00:04, 129.32it/s]Loading weights:   3%|▎         | 14/555 [00:00<00:04, 133.58it/s]Loading weights:   6%|▌         | 31/555 [00:00<00:03, 151.75it/s]Loading weights:   6%|▌         | 32/555 [00:00<00:03, 154.70it/s]Loading weights:   9%|▉         | 49/555 [00:00<00:03, 159.81it/s]Loading weights:  10%|█         | 58/555 [00:00<00:03, 143.01it/s]Loading weights:  12%|█▏        | 65/555 [00:00<00:03, 155.97it/s]Loading weights:  15%|█▍        | 82/555 [00:00<00:02, 164.00it/s]Loading weights:  15%|█▍        | 82/555 [00:00<00:03, 157.21it/s]Loading weights:  18%|█▊        | 100/555 [00:00<00:02, 165.31it/s]Loading weights:  18%|█▊        | 100/555 [00:00<00:02, 161.05it/s]Loading weights:  21%|██▏       | 118/555 [00:00<00:02, 166.85it/s]Loading weights:  21%|██▏       | 118/555 [00:00<00:02, 164.04it/s]Loading weights:  24%|██▍       | 135/555 [00:00<00:02, 164.90it/s]Loading weights:  24%|██▍       | 135/555 [00:00<00:02, 162.83it/s]Loading weights:  27%|██▋       | 152/555 [00:00<00:02, 158.20it/s]Loading weights:  27%|██▋       | 152/555 [00:00<00:02, 158.15it/s]Loading weights:  30%|███       | 169/555 [00:01<00:02, 161.02it/s]Loading weights:  31%|███       | 170/555 [00:01<00:02, 158.60it/s]Loading weights:  34%|███▎      | 187/555 [00:01<00:02, 162.39it/s]Loading weights:  34%|███▍      | 188/555 [00:01<00:02, 164.48it/s]Loading weights:  37%|███▋      | 204/555 [00:01<00:02, 161.21it/s]Loading weights:  37%|███▋      | 205/555 [00:01<00:02, 161.81it/s]Loading weights:  40%|████      | 222/555 [00:01<00:02, 161.21it/s]Loading weights:  40%|███▉      | 221/555 [00:01<00:02, 155.33it/s]Loading weights:  43%|████▎     | 239/555 [00:01<00:01, 159.85it/s]Loading weights:  43%|████▎     | 239/555 [00:01<00:01, 158.88it/s]Loading weights:   0%|          | 0/555 [00:00<?, ?it/s]Loading weights:  46%|████▋     | 257/555 [00:01<00:01, 165.00it/s]Loading weights:   0%|          | 0/555 [00:00<?, ?it/s]Loading weights:  48%|████▊     | 265/555 [00:01<00:01, 149.74it/s]Loading weights:   6%|▌         | 31/555 [00:00<00:04, 107.91it/s]Loading weights:  51%|█████     | 281/555 [00:01<00:02, 113.51it/s]Loading weights:  49%|████▉     | 274/555 [00:02<00:03, 89.81it/s] Loading weights:   6%|▌         | 31/555 [00:00<00:06, 81.15it/s]Loading weights:  10%|█         | 58/555 [00:00<00:03, 127.13it/s]Loading weights:  52%|█████▏    | 289/555 [00:02<00:02, 92.03it/s]Loading weights:  15%|█▍        | 82/555 [00:00<00:03, 155.12it/s]Loading weights:  10%|█         | 58/555 [00:00<00:04, 107.75it/s]Loading weights:  18%|█▊        | 100/555 [00:00<00:02, 154.42it/s]Loading weights:  53%|█████▎    | 294/555 [00:02<00:03, 77.05it/s] Loading weights:  54%|█████▍    | 301/555 [00:02<00:02, 92.03it/s]Loading weights:  15%|█▍        | 82/555 [00:00<00:03, 138.20it/s]Loading weights:  55%|█████▌    | 308/555 [00:02<00:02, 85.26it/s]Loading weights:  18%|█▊        | 101/555 [00:00<00:03, 148.36it/s]Loading weights:  56%|█████▋    | 313/555 [00:02<00:02, 94.78it/s]Loading weights:  23%|██▎       | 127/555 [00:00<00:02, 150.93it/s]Loading weights:  59%|█████▊    | 326/555 [00:02<00:02, 102.27it/s]Loading weights:  59%|█████▊    | 326/555 [00:02<00:02, 101.76it/s]Loading weights:  60%|██████    | 333/555 [00:02<00:01, 130.50it/s]
+Loading weights:  60%|██████    | 333/555 [00:02<00:01, 130.73it/s]
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/a84400789/ms-swift/swift/cli/rlhf.py", line 7, in <module>
+[rank0]:     rlhf_main()
+[rank0]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 243, in rlhf_main
+[rank0]:     return SwiftRLHF(args).main()
+[rank0]:            ^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 29, in __init__
+[rank0]:     self._prepare_model_tokenizer()
+[rank0]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 165, in _prepare_model_tokenizer
+[rank0]:     super()._prepare_model_tokenizer()
+[rank0]:   File "/home/a84400789/ms-swift/swift/ray/base.py", line 168, in wrapper
+[rank0]:     return func(self, *args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 51, in _prepare_model_tokenizer
+[rank0]:     self.model, self.processor = args.get_model_processor(**kwargs)
+[rank0]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/arguments/base_args/base_args.py", line 327, in get_model_processor
+[rank0]:     return get_model_processor(**res)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 615, in get_model_processor
+[rank0]:     return loader.load()
+[rank0]:            ^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 464, in load
+[rank0]:     model, processor = self._get_model_processor(model_dir, config)
+[rank0]:                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 455, in _get_model_processor
+[rank0]:     model = self.get_model(model_dir, config, processor, self.model_kwargs.copy())
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 1130, in get_model
+[rank0]:     return Qwen2VLLoader.get_model(self, model_dir, config, processor, model_kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 729, in get_model
+[rank0]:     model = super().get_model(model_dir, config, processor, model_kwargs)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 309, in get_model
+[rank0]:     model = auto_model_cls.from_pretrained(model_dir, config=config, trust_remote_code=True, **model_kwargs)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/a84400789/ms-swift/swift/model/patcher.py", line 387, in _new_from_pretrained
+[rank0]:     model = from_pretrained(cls, *args, **kwargs)
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4137, in from_pretrained
+[rank0]:     loading_info, disk_offload_index = cls._load_pretrained_model(model, state_dict, checkpoint_files, load_config)
+[rank0]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4256, in _load_pretrained_model
+[rank0]:     loading_info, disk_offload_index = convert_and_load_state_dict_in_model(
+[rank0]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 1212, in convert_and_load_state_dict_in_model
+[rank0]:     realized_value = mapping.convert(
+[rank0]:                      ^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 734, in convert
+[rank0]:     collected_tensors = self.materialize_tensors()
+[rank0]:                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 654, in materialize_tensors
+[rank0]:     tensors = [future.result() for future in tensors if future.result() is not None]
+[rank0]:                                                         ^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 456, in result
+[rank0]:     return self.__get_result()
+[rank0]:            ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+[rank0]:     raise self._exception
+[rank0]:   File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+[rank0]:     result = self.fn(*self.args, **self.kwargs)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 800, in _job
+[rank0]:     return _materialize_copy(tensor, device, dtype)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 789, in _materialize_copy
+[rank0]:     tensor = tensor.to(device=device, dtype=dtype)
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 79.18 GiB of which 13.81 MiB is free. Process 3807406 has 79.16 GiB memory in use. Of the allocated memory 77.66 GiB is allocated by PyTorch, and 15.39 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/home/a84400789/ms-swift/swift/cli/rlhf.py", line 7, in <module>
+[rank2]:     rlhf_main()
+[rank2]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 243, in rlhf_main
+[rank2]:     return SwiftRLHF(args).main()
+[rank2]:            ^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 29, in __init__
+[rank2]:     self._prepare_model_tokenizer()
+[rank2]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 165, in _prepare_model_tokenizer
+[rank2]:     super()._prepare_model_tokenizer()
+[rank2]:   File "/home/a84400789/ms-swift/swift/ray/base.py", line 168, in wrapper
+[rank2]:     return func(self, *args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 51, in _prepare_model_tokenizer
+[rank2]:     self.model, self.processor = args.get_model_processor(**kwargs)
+[rank2]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/arguments/base_args/base_args.py", line 327, in get_model_processor
+[rank2]:     return get_model_processor(**res)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 615, in get_model_processor
+[rank2]:     return loader.load()
+[rank2]:            ^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 464, in load
+[rank2]:     model, processor = self._get_model_processor(model_dir, config)
+[rank2]:                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 455, in _get_model_processor
+[rank2]:     model = self.get_model(model_dir, config, processor, self.model_kwargs.copy())
+[rank2]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 1130, in get_model
+[rank2]:     return Qwen2VLLoader.get_model(self, model_dir, config, processor, model_kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 729, in get_model
+[rank2]:     model = super().get_model(model_dir, config, processor, model_kwargs)
+[rank2]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 309, in get_model
+[rank2]:     model = auto_model_cls.from_pretrained(model_dir, config=config, trust_remote_code=True, **model_kwargs)
+[rank2]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/home/a84400789/ms-swift/swift/model/patcher.py", line 387, in _new_from_pretrained
+[rank2]:     model = from_pretrained(cls, *args, **kwargs)
+[rank2]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4137, in from_pretrained
+[rank2]:     loading_info, disk_offload_index = cls._load_pretrained_model(model, state_dict, checkpoint_files, load_config)
+[rank2]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4256, in _load_pretrained_model
+[rank2]:     loading_info, disk_offload_index = convert_and_load_state_dict_in_model(
+[rank2]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 1212, in convert_and_load_state_dict_in_model
+[rank2]:     realized_value = mapping.convert(
+[rank2]:                      ^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 734, in convert
+[rank2]:     collected_tensors = self.materialize_tensors()
+[rank2]:                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 654, in materialize_tensors
+[rank2]:     tensors = [future.result() for future in tensors if future.result() is not None]
+[rank2]:                                                         ^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 456, in result
+[rank2]:     return self.__get_result()
+[rank2]:            ^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+[rank2]:     raise self._exception
+[rank2]:   File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+[rank2]:     result = self.fn(*self.args, **self.kwargs)
+[rank2]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 800, in _job
+[rank2]:     return _materialize_copy(tensor, device, dtype)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 789, in _materialize_copy
+[rank2]:     tensor = tensor.to(device=device, dtype=dtype)
+[rank2]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 2 has a total capacity of 79.18 GiB of which 13.81 MiB is free. Process 3807408 has 79.16 GiB memory in use. Of the allocated memory 77.66 GiB is allocated by PyTorch, and 15.39 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+Loading weights:  27%|██▋       | 151/555 [00:00<00:02, 169.66it/s]Loading weights:  23%|██▎       | 127/555 [00:00<00:02, 148.17it/s]Loading weights:  31%|███       | 170/555 [00:01<00:02, 169.58it/s]Loading weights:  27%|██▋       | 151/555 [00:01<00:02, 168.13it/s]Loading weights:  31%|███       | 170/555 [00:01<00:02, 171.21it/s]Loading weights:  35%|███▌      | 196/555 [00:01<00:02, 161.90it/s]Loading weights:  40%|███▉      | 220/555 [00:01<00:01, 177.82it/s]Loading weights:  35%|███▌      | 196/555 [00:01<00:02, 161.86it/s]Loading weights:  40%|███▉      | 220/555 [00:01<00:01, 178.05it/s]Loading weights:  43%|████▎     | 239/555 [00:01<00:01, 176.31it/s]Loading weights:  43%|████▎     | 239/555 [00:01<00:01, 178.06it/s]Loading weights:  48%|████▊     | 265/555 [00:01<00:01, 165.94it/s]Loading weights:  52%|█████▏    | 289/555 [00:01<00:01, 180.84it/s]Loading weights:  48%|████▊     | 265/555 [00:01<00:01, 166.08it/s][rank0]:[W324 20:48:14.012377421 ProcessGroupNCCL.cpp:1553] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+Loading weights:  52%|█████▏    | 289/555 [00:01<00:01, 180.97it/s]Loading weights:  55%|█████▌    | 308/555 [00:01<00:01, 178.41it/s]Loading weights:  59%|█████▉    | 327/555 [00:01<00:01, 181.30it/s]Loading weights:  55%|█████▌    | 308/555 [00:01<00:01, 178.21it/s]Loading weights:  60%|██████    | 333/555 [00:02<00:01, 164.67it/s]
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/home/a84400789/ms-swift/swift/cli/rlhf.py", line 7, in <module>
+[rank3]:     rlhf_main()
+[rank3]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 243, in rlhf_main
+[rank3]:     return SwiftRLHF(args).main()
+[rank3]:            ^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 29, in __init__
+[rank3]:     self._prepare_model_tokenizer()
+[rank3]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 165, in _prepare_model_tokenizer
+[rank3]:     super()._prepare_model_tokenizer()
+[rank3]:   File "/home/a84400789/ms-swift/swift/ray/base.py", line 168, in wrapper
+[rank3]:     return func(self, *args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 51, in _prepare_model_tokenizer
+[rank3]:     self.model, self.processor = args.get_model_processor(**kwargs)
+[rank3]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/arguments/base_args/base_args.py", line 327, in get_model_processor
+[rank3]:     return get_model_processor(**res)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 615, in get_model_processor
+[rank3]:     return loader.load()
+[rank3]:            ^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 464, in load
+[rank3]:     model, processor = self._get_model_processor(model_dir, config)
+[rank3]:                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 455, in _get_model_processor
+[rank3]:     model = self.get_model(model_dir, config, processor, self.model_kwargs.copy())
+[rank3]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 1130, in get_model
+[rank3]:     return Qwen2VLLoader.get_model(self, model_dir, config, processor, model_kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 729, in get_model
+[rank3]:     model = super().get_model(model_dir, config, processor, model_kwargs)
+[rank3]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 309, in get_model
+[rank3]:     model = auto_model_cls.from_pretrained(model_dir, config=config, trust_remote_code=True, **model_kwargs)
+[rank3]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/home/a84400789/ms-swift/swift/model/patcher.py", line 387, in _new_from_pretrained
+[rank3]:     model = from_pretrained(cls, *args, **kwargs)
+[rank3]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4137, in from_pretrained
+[rank3]:     loading_info, disk_offload_index = cls._load_pretrained_model(model, state_dict, checkpoint_files, load_config)
+[rank3]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4256, in _load_pretrained_model
+[rank3]:     loading_info, disk_offload_index = convert_and_load_state_dict_in_model(
+[rank3]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 1212, in convert_and_load_state_dict_in_model
+[rank3]:     realized_value = mapping.convert(
+[rank3]:                      ^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 734, in convert
+[rank3]:     collected_tensors = self.materialize_tensors()
+[rank3]:                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 654, in materialize_tensors
+[rank3]:     tensors = [future.result() for future in tensors if future.result() is not None]
+[rank3]:                                                         ^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 456, in result
+[rank3]:     return self.__get_result()
+[rank3]:            ^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+[rank3]:     raise self._exception
+[rank3]:   File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+[rank3]:     result = self.fn(*self.args, **self.kwargs)
+[rank3]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 800, in _job
+[rank3]:     return _materialize_copy(tensor, device, dtype)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 789, in _materialize_copy
+[rank3]:     tensor = tensor.to(device=device, dtype=dtype)
+[rank3]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 3 has a total capacity of 79.18 GiB of which 13.81 MiB is free. Process 3807409 has 79.16 GiB memory in use. Of the allocated memory 77.66 GiB is allocated by PyTorch, and 13.39 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+Loading weights:  60%|██████    | 333/555 [00:02<00:01, 159.14it/s]
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/home/a84400789/ms-swift/swift/cli/rlhf.py", line 7, in <module>
+[rank1]:     rlhf_main()
+[rank1]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 243, in rlhf_main
+[rank1]:     return SwiftRLHF(args).main()
+[rank1]:            ^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 29, in __init__
+[rank1]:     self._prepare_model_tokenizer()
+[rank1]:   File "/home/a84400789/ms-swift/swift/pipelines/train/rlhf.py", line 165, in _prepare_model_tokenizer
+[rank1]:     super()._prepare_model_tokenizer()
+[rank1]:   File "/home/a84400789/ms-swift/swift/ray/base.py", line 168, in wrapper
+[rank1]:     return func(self, *args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/pipelines/train/sft.py", line 51, in _prepare_model_tokenizer
+[rank1]:     self.model, self.processor = args.get_model_processor(**kwargs)
+[rank1]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/arguments/base_args/base_args.py", line 327, in get_model_processor
+[rank1]:     return get_model_processor(**res)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 615, in get_model_processor
+[rank1]:     return loader.load()
+[rank1]:            ^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 464, in load
+[rank1]:     model, processor = self._get_model_processor(model_dir, config)
+[rank1]:                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 455, in _get_model_processor
+[rank1]:     model = self.get_model(model_dir, config, processor, self.model_kwargs.copy())
+[rank1]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 1130, in get_model
+[rank1]:     return Qwen2VLLoader.get_model(self, model_dir, config, processor, model_kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/models/qwen.py", line 729, in get_model
+[rank1]:     model = super().get_model(model_dir, config, processor, model_kwargs)
+[rank1]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/register.py", line 309, in get_model
+[rank1]:     model = auto_model_cls.from_pretrained(model_dir, config=config, trust_remote_code=True, **model_kwargs)
+[rank1]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/a84400789/ms-swift/swift/model/patcher.py", line 387, in _new_from_pretrained
+[rank1]:     model = from_pretrained(cls, *args, **kwargs)
+[rank1]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4137, in from_pretrained
+[rank1]:     loading_info, disk_offload_index = cls._load_pretrained_model(model, state_dict, checkpoint_files, load_config)
+[rank1]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/modeling_utils.py", line 4256, in _load_pretrained_model
+[rank1]:     loading_info, disk_offload_index = convert_and_load_state_dict_in_model(
+[rank1]:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 1212, in convert_and_load_state_dict_in_model
+[rank1]:     realized_value = mapping.convert(
+[rank1]:                      ^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 734, in convert
+[rank1]:     collected_tensors = self.materialize_tensors()
+[rank1]:                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 654, in materialize_tensors
+[rank1]:     tensors = [future.result() for future in tensors if future.result() is not None]
+[rank1]:                                                         ^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 456, in result
+[rank1]:     return self.__get_result()
+[rank1]:            ^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+[rank1]:     raise self._exception
+[rank1]:   File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+[rank1]:     result = self.fn(*self.args, **self.kwargs)
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 800, in _job
+[rank1]:     return _materialize_copy(tensor, device, dtype)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/transformers/core_model_loading.py", line 789, in _materialize_copy
+[rank1]:     tensor = tensor.to(device=device, dtype=dtype)
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 1 has a total capacity of 79.18 GiB of which 13.81 MiB is free. Process 3807407 has 79.16 GiB memory in use. Of the allocated memory 77.66 GiB is allocated by PyTorch, and 15.39 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+W0324 20:48:15.811000 1792324 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1792398 closing signal SIGTERM
+W0324 20:48:15.812000 1792324 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1792399 closing signal SIGTERM
+W0324 20:48:15.812000 1792324 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1792401 closing signal SIGTERM
+E0324 20:48:16.904000 1792324 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 2 (pid: 1792400) of binary: /usr/bin/python3
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 995, in <module>
+    main()
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+/home/a84400789/ms-swift/swift/cli/rlhf.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-03-24_20:48:16
+  host      : sines-2-daal-node-02
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1792398)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2026-03-24_20:48:16
+  host      : sines-2-daal-node-02
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 1792399)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1792399
+[3]:
+  time      : 2026-03-24_20:48:16
+  host      : sines-2-daal-node-02
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 1792401)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1792401
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-24_20:48:15
+  host      : sines-2-daal-node-02
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 1792400)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
