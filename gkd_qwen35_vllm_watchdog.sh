@@ -28,11 +28,11 @@
 #            [ original dataset | teacher sample  ]
 #   Phase 2 (lmbda=0.0, ~70B tokens): Mode 3 offline KD — dataset text as
 #            response, teacher provides logprob supervision. Second half (49 files).
-#             [ original dataset ] 
+#             [ original dataset ]
 #   Phase 3 (lmbda=0.3, ~40B tokens): mixed on/off-policy
-#             [ original dataset (| 50% of student sample) ] 
+#             [ original dataset (| 50% of student sample) ]
 #   Phase 4 (lmbda=1.0, ~30B tokens): full on-policy, reduce exposure bias
-#             [ original dataset | student sample ] 
+#             [ original dataset | student sample ]
 #
 # Token budget:
 #   Phase 1-2: 6 GPUs, bs=4, grad_accum=21, avg ~4k tokens/sample
@@ -49,7 +49,7 @@
 #              for seq_kd (Phase 1-2) and on-policy student generation (Phase 3-4).
 #
 # Usage:
-#   bash gkd_qwen35_vllm.sh |& tee gkd_qwen35_vllm.log
+#   bash gkd_qwen35_vllm_watchdog.sh |& tee gkd_qwen35_vllm.log
 # ============================================================================
 set -euo pipefail
 
@@ -57,7 +57,7 @@ set -euo pipefail
 # export HF_TOKEN=<replace HF_TOKEN>
 
 # ── Model paths ──────────────────────────────────────────────────────────────
-TEACHER_MODEL=/home/r00914194/models/Qwen3.5-35B-A3B
+TEACHER_MODEL=Qwen/Qwen3.5-35B-A3B
 STUDENT_MODEL=/home/r00914194/PruneMe/qwen35_exp80_layer_drop_082331
 
 PHASE1_OUTPUT=output/gkd_9b_phase1
@@ -100,6 +100,9 @@ DATASET1=("${_ALL[@]:0:49}")
 DATASET2=("${_ALL[@]:49:49}")
 DATASET3=("${_ALL[@]:$_N1:$_N2}")
 DATASET4=("${_ALL[@]:$((_N1+_N2))}")
+
+# Presample dataset
+PRESAMPLE_DATA=output/presample_test.jsonl
 
 # ── Helper: start/stop teacher server ────────────────────────────────────────
 start_teacher() {
@@ -229,50 +232,40 @@ start_teacher
 # Note: --teacher_model_server replaces --teacher_model + --teacher_deepspeed
 #       --gkd_logits_topk activates top-k KD (required for server mode)
 #       --temperature applies to all generation (teacher seq_kd + student on-policy)
-# COMMON_ARGS=(
-#     --rlhf_type gkd
-#     --model_type qwen3_5_moe
-#     --teacher_model_server "http://localhost:${TEACHER_PORT}"
-#     --gkd_logits_topk ${TEACHER_MAX_LOGPROBS}
-#     --train_type full
-#     --columns '{"text":"response"}'
-#     --freeze_vit true
-#     --freeze_aligner true
-#     --freeze_llm false
-#     --torch_dtype bfloat16
-#     --temperature 1.0
-#     --warmup_ratio 0.05
-#     --max_length 8192
-#     --truncation_strategy right
-#     --save_steps 200
-#     --save_total_limit 2
-#     --save_only_model true
-#     --deepspeed zero3
-#     --attn_impl flash_attn
-#     --dataloader_num_workers 4
-#     --dataset_num_proc 8
-#     --streaming true
-#     --enable_thinking false
-#     --logging_steps 10
-# )
-#--gradient_checkpointing true
+COMMON_ARGS=(
+    --rlhf_type gkd
+    --model_type qwen3_5_moe
+    --teacher_model_server "http://localhost:${TEACHER_PORT}"
+    --gkd_logits_topk ${TEACHER_MAX_LOGPROBS}
+    --train_type full
+    --columns '{"text":"response"}'
+    --freeze_vit true
+    --freeze_aligner true
+    --freeze_llm false
+    --torch_dtype bfloat16
+    --temperature 1.0
+    --warmup_ratio 0.05
+    --max_length 4096
+    --truncation_strategy right
+    --save_steps 200
+    --save_total_limit 2
+    --save_only_model true
+    --deepspeed zero3
+    --attn_impl flash_attn
+    --dataloader_num_workers 4
+    --dataset_num_proc 8
+    --streaming true
+    --gradient_checkpointing true
+    --enable_thinking false
+    --logging_steps 10
+)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: seq_kd=True, lmbda=0.0 – Mode 2 Sequential KD (files 1-49)
 #   Teacher generates completions on-the-fly; student learns from teacher
 #   sampled sequences instead of raw dataset text.
-#   bs=4, grad_accum=10 → 4×10×4096×6 ≈ 1M tokens/step
+#   bs=4, grad_accum=21 → 4×21×4096×6 ≈ 2.06M tokens/step
 # ══════════════════════════════════════════════════════════════════════════════
-# Presample dataset
-PRESAMPLE_DATA=(
-    output/teacher_presample_shard0.jsonl
-    output/teacher_presample_shard1.jsonl
-    output/teacher_presample_shard2.jsonl
-    output/teacher_presample_shard3.jsonl
-    output/teacher_presample_shard4.jsonl
-    output/teacher_presample_shard0_run3.jsonl
-    output/presample_test.jsonl
-)
 
 check_teacher
 echo "=== Phase 1: seq_kd) ==="
@@ -285,50 +278,38 @@ run_phase "${PHASE1_OUTPUT}" \
         --model_type qwen3_5_moe \
         --model "${STUDENT_MODEL}" \
         --teacher_model_server "http://localhost:${TEACHER_PORT}" \
-        --dataset "${PRESAMPLE_DATA[@]}" \
-        --warmup_ratio 0.05 \
+        --dataset "${PRESAMPLE_DATA}" \
         --seq_kd false \
         --lmbda 0.0 \
         --beta 0.5 \
-        --gkd_logits_topk ${TEACHER_MAX_LOGPROBS} \
+        --gkd_logits_topk ${GKD_MAX_LOGPROBS} \
         --train_type full \
         --freeze_vit true \
         --freeze_aligner true \
         --freeze_llm false \
         --torch_dtype bfloat16 \
         --temperature 1.0 \
-        --max_length 4096 \
+        --max_length 8192 \
         --truncation_strategy right \
         --warmup_ratio 0.05 \
-        --per_device_train_batch_size 4 \
-        --gradient_accumulation_steps 10 \
+        --per_device_train_batch_size 2 \
+        --gradient_accumulation_steps 21 \
         --learning_rate 1e-5 \
         --num_train_epochs 1 \
-        --save_steps 100 \
-        --save_total_limit 10 \
+        --save_steps 10 \
         --save_only_model true \
-        --deepspeed zero3 \
+        --deepspeed zero2 \
         --attn_impl flash_attn \
         --dataloader_num_workers 4 \
         --dataset_num_proc 8 \
         --enable_thinking false \
         --logging_steps 10 \
         --load_from_cache_file true \
+        --padding_free true \
         --output_dir "${PHASE1_OUTPUT}"
 
 #--seq_kd true \
 #--max_steps 24000 \
-#--max_length 8192 \
-#--padding_free true \
-#--per_device_train_batch_size 2 \
-#--gradient_accumulation_steps 21 \
-
-#the following obtrusive bug is a reminder for improving the following KD
-# The following two args are for students. Teacher should have the total context length at least 1 token larger than 8192+1 (i.e. at least 8194)
---max_length 8192 \  
---max_completion_length 1 \
---truncation_strategy left \
-remove mask of query in the ms-swift/swift/rlhf_trainers/gkd_trainer.py
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PHASE 2: lmbda=0.0 – Mode 3 Offline KD (files 50-98)
@@ -336,24 +317,24 @@ remove mask of query in the ms-swift/swift/rlhf_trainers/gkd_trainer.py
 #   Faster than Phase 1 (no teacher generation), broader data coverage.
 #   bs=2, grad_accum=21 → 2×21×8192×6 ≈ 2.07M tokens/step  (total_length=4096+4096=8192)
 # ══════════════════════════════════════════════════════════════════════════════
-# check_teacher
-# echo "=== Phase 2: offline KD, lmbda=0.0 (files 50-98) ==="
-# run_phase "${PHASE2_OUTPUT}" \
-#     env NPROC_PER_NODE=${STUDENT_NPROC} \
-#     CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
-#     PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \
-#     swift rlhf \
-#         "${COMMON_ARGS[@]}" \
-#         --model "${PHASE1_OUTPUT}" \
-#         --dataset "${DATASET2[@]}" \
-#         --lmbda 0.0 \
-#         --seq_kd false \
-#         --max_completion_length 4096 \
-#         --per_device_train_batch_size 2 \
-#         --gradient_accumulation_steps 21 \
-#         --learning_rate 1e-4 \
-#         --max_steps 24000 \
-#         --output_dir "${PHASE2_OUTPUT}"
+check_teacher
+echo "=== Phase 2: offline KD, lmbda=0.0 (files 50-98) ==="
+run_phase "${PHASE2_OUTPUT}" \
+    env NPROC_PER_NODE=${STUDENT_NPROC} \
+    CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
+    PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \
+    swift rlhf \
+        "${COMMON_ARGS[@]}" \
+        --model "${STUDENT_MODEL}" \
+        --dataset "${DATASET2[@]}" \
+        --lmbda 0.0 \
+        --seq_kd false \
+        --max_completion_length 4096 \
+        --per_device_train_batch_size 2 \
+        --gradient_accumulation_steps 21 \
+        --learning_rate 1e-4 \
+        --max_steps 24000 \
+        --output_dir "${PHASE2_OUTPUT}"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: lmbda=0.3 – Mixed on/off-policy
@@ -361,62 +342,62 @@ remove mask of query in the ms-swift/swift/rlhf_trainers/gkd_trainer.py
 #   vllm_mode=colocate + sleep_level=1: student vLLM shares GPUs with training.
 #   bs=2, grad_accum=35 → 2×35×6144×6 ≈ 2.58M tokens/step  (total_length=4096+2048=6144)
 # ══════════════════════════════════════════════════════════════════════════════
-# check_teacher
-# echo "=== Phase 3: lmbda=0.3 ==="
-# run_phase "${PHASE3_OUTPUT}" \
-#     env NPROC_PER_NODE=${STUDENT_NPROC} \
-#     CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
-#     PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \
-#     swift rlhf \
-#         "${COMMON_ARGS[@]}" \
-#         --model "${PHASE2_OUTPUT}" \
-#         --dataset "${DATASET3[@]}" \
-#         --lmbda 0.3 \
-#         --max_completion_length 2048 \
-#         --per_device_train_batch_size 2 \
-#         --gradient_accumulation_steps 35 \
-#         --learning_rate 5e-5 \
-#         --max_steps 13000 \
-#         --use_vllm true \
-#         --vllm_mode colocate \
-#         --vllm_gpu_memory_utilization 0.3 \
-#         --vllm_tensor_parallel_size 1 \
-#         --vllm_max_model_len ${STUDENT_VLLM_MAX_MODEL_LEN} \
-#         --sleep_level 1 \
-#         --offload_model true \
-#         --offload_optimizer true \
-#         --output_dir "${PHASE3_OUTPUT}"
+check_teacher
+echo "=== Phase 3: lmbda=0.3 ==="
+run_phase "${PHASE3_OUTPUT}" \
+    env NPROC_PER_NODE=${STUDENT_NPROC} \
+    CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
+    PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \
+    swift rlhf \
+        "${COMMON_ARGS[@]}" \
+        --model "${PHASE2_OUTPUT}" \
+        --dataset "${DATASET3[@]}" \
+        --lmbda 0.3 \
+        --max_completion_length 2048 \
+        --per_device_train_batch_size 2 \
+        --gradient_accumulation_steps 35 \
+        --learning_rate 5e-5 \
+        --max_steps 13000 \
+        --use_vllm true \
+        --vllm_mode colocate \
+        --vllm_gpu_memory_utilization 0.3 \
+        --vllm_tensor_parallel_size 1 \
+        --vllm_max_model_len ${STUDENT_VLLM_MAX_MODEL_LEN} \
+        --sleep_level 1 \
+        --offload_model true \
+        --offload_optimizer true \
+        --output_dir "${PHASE3_OUTPUT}"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PHASE 4: lmbda=1.0 – Full on-policy KD
 #   Every sample uses student-generated output → vLLM critical for speed.
 #   bs=2, grad_accum=35 → 2×35×6144×6 ≈ 2.58M tokens/step  (total_length=4096+2048=6144)
 # ══════════════════════════════════════════════════════════════════════════════
-# check_teacher
-# echo "=== Phase 4: lmbda=1.0 ==="
-# run_phase "${PHASE4_OUTPUT}" \
-#     env NPROC_PER_NODE=${STUDENT_NPROC} \
-#     CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
-#     PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \
-#     swift rlhf \
-#         "${COMMON_ARGS[@]}" \
-#         --model "${PHASE3_OUTPUT}" \
-#         --dataset "${DATASET4[@]}" \
-#         --lmbda 1.0 \
-#         --max_completion_length 2048 \
-#         --per_device_train_batch_size 2 \
-#         --gradient_accumulation_steps 35 \
-#         --learning_rate 2e-5 \
-#         --max_steps 7000 \
-#         --use_vllm true \
-#         --vllm_mode colocate \
-#         --vllm_gpu_memory_utilization 0.3 \
-#         --vllm_tensor_parallel_size 1 \
-#         --vllm_max_model_len ${STUDENT_VLLM_MAX_MODEL_LEN} \
-#         --sleep_level 1 \
-#         --offload_model true \
-#         --offload_optimizer true \
-#         --output_dir "${PHASE4_OUTPUT}"
+check_teacher
+echo "=== Phase 4: lmbda=1.0 ==="
+run_phase "${PHASE4_OUTPUT}" \
+    env NPROC_PER_NODE=${STUDENT_NPROC} \
+    CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
+    PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True' \
+    swift rlhf \
+        "${COMMON_ARGS[@]}" \
+        --model "${PHASE3_OUTPUT}" \
+        --dataset "${DATASET4[@]}" \
+        --lmbda 1.0 \
+        --max_completion_length 2048 \
+        --per_device_train_batch_size 2 \
+        --gradient_accumulation_steps 35 \
+        --learning_rate 2e-5 \
+        --max_steps 7000 \
+        --use_vllm true \
+        --vllm_mode colocate \
+        --vllm_gpu_memory_utilization 0.3 \
+        --vllm_tensor_parallel_size 1 \
+        --vllm_max_model_len ${STUDENT_VLLM_MAX_MODEL_LEN} \
+        --sleep_level 1 \
+        --offload_model true \
+        --offload_optimizer true \
+        --output_dir "${PHASE4_OUTPUT}"
 
-# stop_teacher
-# echo "=== Training complete. Final model: ${PHASE4_OUTPUT} ==="
+stop_teacher
+echo "=== Training complete. Final model: ${PHASE4_OUTPUT} ==="
