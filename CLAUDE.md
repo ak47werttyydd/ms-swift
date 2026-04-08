@@ -23,7 +23,12 @@ make linter                     # Runs .dev_scripts/linter.sh
 pre-commit run --all-files      # Run all pre-commit hooks (flake8, isort, yapf)
 ```
 
-Code style: line length 120, isort with `known_first_party=swift`, yapf PEP8.
+Code style: line length 120, isort with `known_first_party=swift`, yapf PEP8, **single quotes** for strings (enforced by `double-quote-string-fixer` pre-commit hook).
+
+### Docs
+```bash
+make docs                       # Runs .dev_scripts/build_docs.sh
+```
 
 ### Tests
 ```bash
