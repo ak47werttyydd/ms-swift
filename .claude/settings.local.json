@@ -10,7 +10,10 @@
       "Bash(chmod:*)",
       "Bash(dmesg)",
       "Bash(nvidia-smi)",
-      "Bash(nvidia-smi topo:*)"
+      "Bash(nvidia-smi topo:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Read(//home/s00919127/latent-moe/**)"
     ]
   }
 }
