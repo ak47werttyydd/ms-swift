@@ -156,3 +156,6 @@ ast_index_file.py
 
 # student model
 Qwen3_5-0.8B-A0.1B-student/
+
+# latentMoE model
+qwen35_latentmoe/model.safetensors*
