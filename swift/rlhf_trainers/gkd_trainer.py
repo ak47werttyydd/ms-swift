@@ -259,8 +259,27 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         # If generate is used, then use_logits_to_keep must be set to False.
         use_logits_to_keep = self.get_use_logits_to_keep(True)
         if use_logits_to_keep and not self.use_liger_gkd_loss:
+            if not hasattr(self, '_cl_dbg_count'):
+                self._cl_dbg_count = 0
+            self._cl_dbg_count += 1
+            if self._cl_dbg_count <= 20:
+                labels_pre = inputs['labels']
+                n_valid_pre = (labels_pre != -100).sum().item()
+                logger.info(
+                    f'[CL DEBUG call={self._cl_dbg_count}] '
+                    f'BEFORE prepare_logits_to_keep: labels_shape={labels_pre.shape}, '
+                    f'n_valid={n_valid_pre}, '
+                    f'teacher_api_logprobs_shape={teacher_api_logprobs.shape if teacher_api_logprobs is not None else None}')
             self.prepare_logits_to_keep(inputs)
             model_inputs['logits_to_keep'] = inputs['logits_to_keep']
+            if self._cl_dbg_count <= 20:
+                labels_post = inputs['labels']
+                shifted = torch.roll(labels_post, shifts=-1, dims=1)
+                n_valid_post = (shifted != -100).sum().item()
+                logger.info(
+                    f'[CL DEBUG call={self._cl_dbg_count}] '
+                    f'AFTER: labels_shape={labels_post.shape}, logits_to_keep={inputs["logits_to_keep"]}, '
+                    f'shifted_n_valid={n_valid_post}')
 
         if self.use_liger_gkd_loss:
             # Liger fused JSD loss for memory efficiency
@@ -716,6 +735,7 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         teacher_logits.div_(temperature)
 
         if num_valid == 0:
+            logger.warning('GKD JSD loss: num_valid=0, all labels are -100!')
             return student_logits.new_zeros(())
 
         num_valid_int = num_valid if isinstance(num_valid, int) else num_valid.item()
@@ -755,7 +775,18 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             total_loss = total_loss + jsd_chunk.sum()
             del jsd_chunk, s_log_probs, t_log_probs
 
-        return total_loss / num_valid
+        jsd_result = total_loss / num_valid
+        if not hasattr(self, '_jsd_dbg_count'):
+            self._jsd_dbg_count = 0
+        self._jsd_dbg_count += 1
+        if self._jsd_dbg_count <= 20:
+            logger.info(
+                f'[GKD DEBUG call={self._jsd_dbg_count}] '
+                f'JSD loss={jsd_result.item():.10f}, total_loss={total_loss.item():.6f}, '
+                f'num_valid={num_valid_int}, '
+                f's_sample={student_logits[0, :3].tolist()}, '
+                f't_sample={teacher_logits[0, :3].tolist()}')
+        return jsd_result
 
     def _prepare_logging(self):
         """Initialize logging components for on-policy rollout tracking."""
