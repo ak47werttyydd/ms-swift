@@ -158,4 +158,7 @@ ast_index_file.py
 Qwen3_5-0.8B-A0.1B-student/
 
 # latentMoE model
-qwen35_latentmoe/model.safetensors*
+**/model.safetensors*
+
+# figures
+**/*.png

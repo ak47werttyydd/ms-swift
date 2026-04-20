@@ -2,11 +2,11 @@
 set -euo pipefail
 
 TEACHER_MODEL="${TEACHER_MODEL:-/home/r00914194/models/Qwen3.5-35B-A3B}"
-STUDENT_MODEL="${STUDENT_MODEL:-/home/a84400789/ms-swift/qwen35_latentmoe/ckpt}"
+STUDENT_MODEL="${STUDENT_MODEL:-/home/a84400789/ms-swift/qwen35_latentmoe/rezaul_latentmoe_24layers_original_ckpt}"
 
-PHASE1_OUTPUT="${PHASE1_OUTPUT:-/home/a84400789/ms-swift/output/gkd_sandeep_latentmoe_only}"
+PHASE1_OUTPUT="${PHASE1_OUTPUT:-/home/a84400789/ms-swift/output/gkd_rezaul_latentmoe_24l}"
 
-# ── Plugin path (sibling of STUDENT_MODEL/ckpt) ─────────────────────────────
+# ── Plugin path (sibling of STUDENT_MODEL's ckpt dir) ───────────────────────
 GKD_PLUGIN="$(dirname "${STUDENT_MODEL}")/gkd_plugin.py"
 
 # ── Teacher vLLM server config ───────────────────────────────────────────────
@@ -151,7 +151,7 @@ start_teacher
 # PHASE 1: Offline GKD (lmbda=0.0, dataset responses with teacher logits)
 # ═══════════════════════════════════════════════════════════════════════════════
 check_teacher
-echo "=== Phase 1: Offline GKD (lmbda=0.0) ==="
+echo "=== Phase 1: Offline GKD (lmbda=0.0) — 24-layer student ==="
 run_phase "${PHASE1_OUTPUT}" \
     env NPROC_PER_NODE=${STUDENT_NPROC} \
     CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
@@ -177,8 +177,8 @@ run_phase "${PHASE1_OUTPUT}" \
         --max_completion_length 1 \
         --truncation_strategy left \
         --warmup_ratio 0.05 \
-        --per_device_train_batch_size 3 \
-        --gradient_accumulation_steps 13 \
+        --per_device_train_batch_size 6 \
+        --gradient_accumulation_steps 7 \
         --learning_rate 1e-5 \
         --num_train_epochs 1 \
         --save_steps 100 \
@@ -193,5 +193,9 @@ run_phase "${PHASE1_OUTPUT}" \
         --load_from_cache_file true \
         --loss_scale all \
         --output_dir "${PHASE1_OUTPUT}"
+
+# --learning_rate 1e-5 \
+# --save_steps 100 \
+
 # --attn_impl sdpa \
 echo "=== GKD training complete ==="

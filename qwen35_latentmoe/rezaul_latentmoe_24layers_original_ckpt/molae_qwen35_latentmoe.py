@@ -199,69 +199,40 @@ class Qwen3_5LatentExperts(nn.Module):
             torch.empty(self.num_experts, self.latent_dim, self.intermediate_dim)
         )
 
-        # Backward-compat: transparently repack legacy ModuleList-of-MLPs
-        # checkpoints into the packed (gate_up_proj, down_proj) format.
-        self._register_load_state_dict_pre_hook(self._repack_legacy_state_dict)
+        # Guard: detect legacy per-expert checkpoint format and fail early
+        # instead of silently loading zeros under DeepSpeed Zero3.
+        self._register_load_state_dict_pre_hook(self._check_legacy_state_dict)
 
-    def _repack_legacy_state_dict(
+    def _check_legacy_state_dict(
         self, state_dict, prefix, local_metadata, strict,
         missing_keys, unexpected_keys, error_msgs,
     ) -> None:
-        """Pre-hook: convert legacy per-expert unpacked weights into packed tensors.
+        """Pre-hook: reject legacy per-expert unpacked checkpoints.
 
-        Legacy format (emitted by an earlier revision of this module, where
-        ``experts`` was an ``nn.ModuleList`` of per-expert ``Qwen3MoeMLP``):
-            {prefix}{e}.gate_proj.weight    shape (intermediate, latent_dim)
-            {prefix}{e}.up_proj.weight      shape (intermediate, latent_dim)
-            {prefix}{e}.down_proj.weight    shape (latent_dim, intermediate)
+        Legacy format (per-expert ``Qwen3MoeMLP`` keys) is incompatible with
+        DeepSpeed Zero3 — the runtime hook that repacks them into packed tensors
+        is silently bypassed by Zero3's parameter loading, resulting in all-zero
+        expert weights and a broken model.
 
-        Packed format (current):
-            {prefix}gate_up_proj            shape (E, 2 * intermediate, latent_dim)
-            {prefix}down_proj               shape (E, latent_dim, intermediate)
-
-        The mapping is a pure reshape — ``F.linear(x, W)`` computes ``x @ W.T``
-        whether ``W`` is a per-expert ``Linear.weight`` or a row of the packed
-        parameter, so no transpose is needed.
-
-        No-op when the state_dict already contains the packed keys, or when
-        neither format is present (the default loader then reports missing keys).
+        Use ``repack_experts.py --convert`` to pre-convert the checkpoint before
+        training.
         """
-        # Already packed -> nothing to do.
+        # Already packed -> OK.
         if (f"{prefix}gate_up_proj" in state_dict
                 or f"{prefix}down_proj" in state_dict):
             return
 
-        # Sentinel key for the legacy layout.
-        if f"{prefix}0.gate_proj.weight" not in state_dict:
-            return
-
-        num_experts = self.num_experts
-        gate_rows: List[torch.Tensor] = []
-        up_rows: List[torch.Tensor] = []
-        down_rows: List[torch.Tensor] = []
-        legacy_keys: List[str] = []
-        for e in range(num_experts):
-            gk = f"{prefix}{e}.gate_proj.weight"
-            uk = f"{prefix}{e}.up_proj.weight"
-            dk = f"{prefix}{e}.down_proj.weight"
-            if gk not in state_dict or uk not in state_dict or dk not in state_dict:
-                # Partial legacy set — abort to avoid corrupting state_dict.
-                return
-            gate_rows.append(state_dict[gk])
-            up_rows.append(state_dict[uk])
-            down_rows.append(state_dict[dk])
-            legacy_keys.extend([gk, uk, dk])
-
-        gate_stack = torch.stack(gate_rows, dim=0)                  # (E, I, L)
-        up_stack = torch.stack(up_rows, dim=0)                      # (E, I, L)
-        packed_gate_up = torch.cat([gate_stack, up_stack], dim=1)   # (E, 2I, L)
-        packed_down = torch.stack(down_rows, dim=0)                 # (E, L, I)
-
-        state_dict[f"{prefix}gate_up_proj"] = packed_gate_up
-        state_dict[f"{prefix}down_proj"] = packed_down
-
-        for k in legacy_keys:
-            del state_dict[k]
+        # Legacy format detected -> fail loudly.
+        if f"{prefix}0.gate_proj.weight" in state_dict:
+            raise RuntimeError(
+                f'Legacy per-expert checkpoint detected (found key '
+                f'"{prefix}0.gate_proj.weight"). This format is incompatible '
+                f'with DeepSpeed Zero3 and will result in all-zero expert '
+                f'weights. Run:\n\n'
+                f'    python qwen35_latentmoe/repack_experts.py --convert '
+                f'<checkpoint_dir>\n\n'
+                f'to convert to packed format before training.'
+            )
 
     def forward(
         self,
@@ -575,6 +546,10 @@ class Qwen3_5LatentMoeForConditionalGeneration(Qwen3_5MoeForConditionalGeneratio
         # For ConditionalGeneration, MoE attrs live under config.text_config.
         text_config = getattr(self.config, "text_config", self.config)
         _replace_sparse_moe_blocks_with_latent(self, text_config)
+
+    
+    # def save_pretrained(self):
+    #     transformers.auto.save_pretained(self)
 
 
 # -----------------------------------------------------------------------------
