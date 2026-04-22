@@ -13,7 +13,11 @@
       "Bash(nvidia-smi topo:*)",
       "Bash(grep:*)",
       "Bash(find:*)",
-      "Read(//home/s00919127/latent-moe/**)"
+      "Read(//home/s00919127/latent-moe/**)",
+      "Bash(nvcc:*)",
+      "Bash(pip freeze:*)",
+      "Bash(apt list:*)",
+      "Bash(ldconfig -p)"
     ]
   }
 }

@@ -1,11 +1,15 @@
-# docker-compose.yml for ms-swift KD Training
+# docker-compose.yml — ms-swift GKD Training for Qwen3.5 LatentMoE
 #
 # Usage:
-#   docker-compose up -d KD
-#   docker exec -it kd bash
-#   docker-compose down KD
+#   docker compose up -d KD           # start container
+#   docker exec -it kd bash           # enter shell
+#   docker compose down                # stop
+#
+# Environment on host:
+#   - 8x NVIDIA H100 80GB (GPUs 0-5: student, GPUs 6-7: teacher)
+#   - NVIDIA Driver >= 590, CUDA 12.8+
+#   - /home mounted into container (model weights, ms-swift source, checkpoints)
 
-# ----- Shared config -----
 x-common: &common
   image: daal/ms-swift:v0
   deploy:
@@ -24,18 +28,24 @@ x-common: &common
   environment: &common-env
     - NGPU=8
     - CUDA_DEVICE_ORDER=PCI_BUS_ID
+    # NVIDIA
     - NVIDIA_REQUIRE_IMEX_CHANNELS=1
-    - NVIDIA_DRIVER_CAPABILITIES=compute,utility     # training needed CUDA capability
-    - NCCL_DEBUG=WARN 
-    - NCCL_ASYNC_ERROR_HANDLING=1   # report hangs as errors, not silent blocks                                                                                          
-    - NCCL_TIMEOUT=1800             # 30min timeout before NCCL raises an error                                                                                          
-    - NCCL_P2P_DISABLE=0            # keep NVSwitch P2P enabled (don't fall back)                                                                                        
-    - NCCL_SHM_DISABLE=0            # keep SHM path enabled  
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    # NCCL (multi-GPU communication)
+    - NCCL_DEBUG=WARN
+    - NCCL_ASYNC_ERROR_HANDLING=1
+    - NCCL_TIMEOUT=1800
+    - NCCL_P2P_DISABLE=0
+    - NCCL_SHM_DISABLE=0
+    # Model caches on ramdisk
     - HF_HOME=/dev/shm/HF_HOME
     - MODELSCOPE_CACHE=/dev/shm/ms_cache
+    # Optional
     - WANDB_API_KEY=${WANDB_API_KEY:-}
     - MASTER_ADDR=${MASTER_ADDR:-localhost}
     - MASTER_PORT=${MASTER_PORT:-29500}
+    # ms-swift source dir (override if different on target server)
+    - MS_SWIFT_DIR=${MS_SWIFT_DIR:-/home/a84400789/ms-swift}
   volumes:
     - /home:/home
     - /dev/shm:/dev/shm
