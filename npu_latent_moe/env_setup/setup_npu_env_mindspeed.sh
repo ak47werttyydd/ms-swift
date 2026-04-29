@@ -32,6 +32,7 @@ NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
 VLLM_DIR="${VLLM_DIR:-/home/w00498690/gdn_post_train/vllm}"
+VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/cosdt/vllm-ascend}"
 
 # MindSpeed stack
 MEGATRON_LM_REPO="${MEGATRON_LM_REPO:-/home/w00498690/gdn_post_train/Megatron-LM}"
@@ -68,6 +69,7 @@ if [[ -f "$NNAL_SETENV" ]]; then
     source "$NNAL_SETENV"
 fi
 export SOC_VERSION
+export GIT_SSL_NO_VERIFY=true
 
 # --- conda env ---
 eval "$(conda shell.bash hook)"
@@ -81,7 +83,7 @@ conda activate "$ENV_NAME"
 python -V
 
 # --- pip config ---
-python -m pip install --upgrade "pip<25" setuptools wheel
+python -m pip install --upgrade pip setuptools wheel
 if [[ "$USE_CN_MIRROR" == "1" ]]; then
     pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
 fi
@@ -105,7 +107,7 @@ pip install apex-ascend \
 # --- vLLM (matched tag), teacher-side; NPU-skip target ---
 if [[ ! -d "$VLLM_DIR/.git" ]]; then
     log "Cloning vllm @ $VLLM_TAG → $VLLM_DIR"
-    git clone --depth 1 --branch "$VLLM_TAG" https://github.com/vllm-project/vllm "$VLLM_DIR"
+    git clone --branch "$VLLM_TAG" --single-branch --depth 1 https://github.com/vllm-project/vllm "$VLLM_DIR"
 fi
 (
     cd "$VLLM_DIR"
@@ -113,7 +115,10 @@ fi
 )
 
 # --- vllm-ascend (teacher inference backend) ---
-[[ -d "$VLLM_ASCEND_DIR/.git" ]] || die "vllm-ascend checkout not found at $VLLM_ASCEND_DIR"
+if [[ ! -d "$VLLM_ASCEND_DIR/.git" ]]; then
+    log "Cloning vllm-ascend @ $VLLM_ASCEND_BRANCH → $VLLM_ASCEND_DIR"
+    git clone --branch "$VLLM_ASCEND_BRANCH" --single-branch --depth 1 "$VLLM_ASCEND_URL" "$VLLM_ASCEND_DIR"
+fi
 (
     cd "$VLLM_ASCEND_DIR"
     log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"

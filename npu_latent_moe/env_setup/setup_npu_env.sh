@@ -35,6 +35,7 @@ NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
 VLLM_DIR="${VLLM_DIR:-/home/w00498690/gdn_post_train/vllm}"
+VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/cosdt/vllm-ascend}"
 
 VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"   # matches vllm-ascend releases/v0.18.0 CI
@@ -66,6 +67,7 @@ else
     log "NNAL set_env.sh not found at $NNAL_SETENV — libatb.so features may be unavailable."
 fi
 export SOC_VERSION
+export GIT_SSL_NO_VERIFY=true
 
 # --- conda env ---
 eval "$(conda shell.bash hook)"
@@ -79,7 +81,7 @@ conda activate "$ENV_NAME"
 python -V
 
 # --- pip config ---
-python -m pip install --upgrade "pip<25" setuptools wheel
+python -m pip install --upgrade pip setuptools wheel
 if [[ "$USE_CN_MIRROR" == "1" ]]; then
     pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
 fi
@@ -94,7 +96,7 @@ pip install "torch-npu==2.9.0" decorator \
 # --- vllm (matched tag), source install with NPU-skip target ---
 if [[ ! -d "$VLLM_DIR/.git" ]]; then
     log "Cloning vllm @ $VLLM_TAG → $VLLM_DIR"
-    git clone --depth 1 --branch "$VLLM_TAG" https://github.com/vllm-project/vllm "$VLLM_DIR"
+    git clone --branch "$VLLM_TAG" --single-branch --depth 1 https://github.com/vllm-project/vllm "$VLLM_DIR"
 else
     log "Using existing vllm checkout at $VLLM_DIR (expecting tag $VLLM_TAG)"
 fi
@@ -103,8 +105,11 @@ fi
     VLLM_TARGET_DEVICE=empty pip install -v -e .
 )
 
-# --- vllm-ascend from local checkout on releases/v0.18.0 ---
-[[ -d "$VLLM_ASCEND_DIR/.git" ]] || die "vllm-ascend checkout not found at $VLLM_ASCEND_DIR"
+# --- vllm-ascend ---
+if [[ ! -d "$VLLM_ASCEND_DIR/.git" ]]; then
+    log "Cloning vllm-ascend @ $VLLM_ASCEND_BRANCH → $VLLM_ASCEND_DIR"
+    git clone --branch "$VLLM_ASCEND_BRANCH" --single-branch --depth 1 "$VLLM_ASCEND_URL" "$VLLM_ASCEND_DIR"
+fi
 (
     cd "$VLLM_ASCEND_DIR"
     log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"

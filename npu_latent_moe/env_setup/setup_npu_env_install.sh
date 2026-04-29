@@ -25,6 +25,7 @@ PY_VERSION="${PY_VERSION:-3.11}"
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
 VLLM_DIR="${VLLM_DIR:-/home/w00498690/gdn_post_train/vllm}"
+VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/cosdt/vllm-ascend}"
 
 VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"
@@ -44,6 +45,7 @@ die() { printf '\033[1;31m[install:error]\033[0m %s\n' "$*" >&2; exit 1; }
 command -v npu-smi >/dev/null 2>&1 || die "npu-smi not found — install Ascend driver first."
 command -v conda   >/dev/null 2>&1 || die "conda not found in PATH."
 command -v git     >/dev/null 2>&1 || die "git not found in PATH."
+export GIT_SSL_NO_VERIFY=true
 
 # --- conda env ---
 eval "$(conda shell.bash hook)"
@@ -57,7 +59,7 @@ conda activate "$ENV_NAME"
 python -V
 
 # --- pip config ---
-python -m pip install --upgrade "pip<25" setuptools wheel
+python -m pip install --upgrade pip setuptools wheel
 if [[ "$USE_CN_MIRROR" == "1" ]]; then
     pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
 fi
@@ -73,7 +75,7 @@ pip install "torch-npu==2.9.0" decorator \
 # --- vllm (matched tag), source install with NPU-skip target ---
 if [[ ! -d "$VLLM_DIR/.git" ]]; then
     log "Cloning vllm @ $VLLM_TAG → $VLLM_DIR"
-    git clone --depth 1 --branch "$VLLM_TAG" https://github.com/vllm-project/vllm "$VLLM_DIR"
+    git clone --branch "$VLLM_TAG" --single-branch --depth 1 https://github.com/vllm-project/vllm "$VLLM_DIR"
 else
     log "Using existing vllm checkout at $VLLM_DIR (expecting tag $VLLM_TAG)"
 fi
@@ -83,7 +85,10 @@ fi
 )
 
 # --- vllm-ascend ---
-[[ -d "$VLLM_ASCEND_DIR/.git" ]] || die "vllm-ascend checkout not found at $VLLM_ASCEND_DIR"
+if [[ ! -d "$VLLM_ASCEND_DIR/.git" ]]; then
+    log "Cloning vllm-ascend @ $VLLM_ASCEND_BRANCH → $VLLM_ASCEND_DIR"
+    git clone --branch "$VLLM_ASCEND_BRANCH" --single-branch --depth 1 "$VLLM_ASCEND_URL" "$VLLM_ASCEND_DIR"
+fi
 (
     cd "$VLLM_ASCEND_DIR"
     log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"
