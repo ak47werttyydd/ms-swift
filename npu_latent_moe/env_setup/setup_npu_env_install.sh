@@ -81,7 +81,11 @@ else
 fi
 (
     cd "$VLLM_DIR"
-    VLLM_TARGET_DEVICE=empty pip install -v -e .
+    if pip show vllm 2>/dev/null | grep -q "^Version: ${VLLM_TAG#v}"; then
+        log "vllm ${VLLM_TAG#v} already installed — skipping pip install"
+    else
+        VLLM_TARGET_DEVICE=empty pip install -v -e .
+    fi
 )
 
 # --- vllm-ascend ---
@@ -91,11 +95,19 @@ if [[ ! -d "$VLLM_ASCEND_DIR/.git" ]]; then
 fi
 (
     cd "$VLLM_ASCEND_DIR"
-    log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"
-    git fetch --all --tags
-    git checkout "$VLLM_ASCEND_BRANCH"
-    git submodule update --init --recursive
-    SOC_VERSION="$SOC_VERSION" pip install -v -e .
+    _vllm_ascend_ver="${VLLM_ASCEND_BRANCH##*v}"
+    if pip show vllm-ascend 2>/dev/null | grep -q "^Version: ${_vllm_ascend_ver}"; then
+        log "vllm-ascend ${_vllm_ascend_ver} already installed — skipping"
+    else
+        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        if [[ "$current_branch" != "$VLLM_ASCEND_BRANCH" ]]; then
+            log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"
+            git fetch --all --tags
+            git checkout "$VLLM_ASCEND_BRANCH"
+        fi
+        git submodule update --init --recursive
+        SOC_VERSION="$SOC_VERSION" pip install -v -e .
+    fi
 )
 
 # --- ms-swift ---
@@ -108,7 +120,8 @@ fi
 
 # --- Training extras ---
 log "Installing deepspeed and ms-swift extras"
-pip install "deepspeed<0.19" "trl>=0.15,<0.30" "peft>=0.11,<0.19" \
+pip install "torch==2.9.0" \
+            "deepspeed<0.19" "trl>=0.15,<0.30" "peft>=0.11,<0.19" \
             "transformers>=4.57.4,<5.6" "accelerate" \
             "tensorboard" "swanlab" \
             "modelscope>=1.23" "datasets>=3.0,<4.0" \
