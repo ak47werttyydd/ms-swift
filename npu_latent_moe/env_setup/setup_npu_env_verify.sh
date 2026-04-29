@@ -11,6 +11,8 @@ set -euo pipefail
 ENV_NAME="${ENV_NAME:-ms-swift}"
 CANN_SETENV="${CANN_SETENV:-/usr/local/Ascend/ascend-toolkit/set_env.sh}"
 NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
+# 910B1 = ascend910b1 (Atlas A2); 910B3/B4 = ascend910_9391 (Atlas A3).
+SOC_VERSION="${SOC_VERSION:-ascend910b1}"
 
 log() { printf '\033[1;36m[verify]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[verify:error]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -25,6 +27,7 @@ if [[ -f "$NNAL_SETENV" ]]; then
 else
     log "NNAL set_env.sh not found at $NNAL_SETENV — libatb.so features may be unavailable."
 fi
+export SOC_VERSION
 
 # --- Activate env ---
 eval "$(conda shell.bash hook)"

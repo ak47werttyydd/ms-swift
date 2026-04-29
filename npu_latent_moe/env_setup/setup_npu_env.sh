@@ -32,12 +32,16 @@ CANN_SETENV="${CANN_SETENV:-/usr/local/Ascend/ascend-toolkit/set_env.sh}"
 NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
 
 # Repo checkouts (override via env if you keep them elsewhere)
-VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-$HOME/Code/vllm-ascend}"
-MS_SWIFT_DIR="${MS_SWIFT_DIR:-$HOME/Code/ms-swift}"
-VLLM_DIR="${VLLM_DIR:-$HOME/Code/vllm}"
+VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
+MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
+VLLM_DIR="${VLLM_DIR:-/home/w00498690/gdn_post_train/vllm}"
 
 VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"   # matches vllm-ascend releases/v0.18.0 CI
+
+# SOC_VERSION: required at runtime and by vllm-ascend source install.
+# 910B1 = ascend910b1 (Atlas A2); 910B3/B4 = ascend910_9391 (Atlas A3).
+SOC_VERSION="${SOC_VERSION:-ascend910b1}"
 
 # Optional: Chinese mirrors (set USE_CN_MIRROR=1 if you're in mainland China)
 USE_CN_MIRROR="${USE_CN_MIRROR:-0}"
@@ -61,6 +65,7 @@ if [[ -f "$NNAL_SETENV" ]]; then
 else
     log "NNAL set_env.sh not found at $NNAL_SETENV — libatb.so features may be unavailable."
 fi
+export SOC_VERSION
 
 # --- conda env ---
 eval "$(conda shell.bash hook)"
@@ -84,7 +89,7 @@ fi
 # Do NOT install torch from pytorch.org — those wheels are x86_64 only.
 log "Installing torch-npu==2.9.0 (pulls aarch64 torch 2.9.0)"
 pip install "torch-npu==2.9.0" decorator \
-    -i https://mirrors.huaweicloud.com/ascend/repos/pypi/simple
+    --extra-index-url https://mirrors.huaweicloud.com/ascend/repos/pypi
 
 # --- vllm (matched tag), source install with NPU-skip target ---
 if [[ ! -d "$VLLM_DIR/.git" ]]; then
@@ -105,6 +110,7 @@ fi
     log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"
     git fetch --all --tags
     git checkout "$VLLM_ASCEND_BRANCH"
+    git submodule update --init --recursive
     pip install -v -e .
 )
 
@@ -122,9 +128,9 @@ pip install "deepspeed<0.19" "trl>=0.15,<0.30" "peft>=0.11,<0.19" \
             "transformers>=4.57.4,<5.6" "accelerate" \
             "tensorboard" "swanlab" \
             "modelscope>=1.23" "datasets>=3.0,<4.0" \
-            "math_verify" "liger_kernel" "nvitop"
-# Note: flash-attn is x86-CUDA-only. Training on NPU uses torch-npu's native
-# fused SDPA (`--attn_impl sdpa`), NOT flash_attn.
+            "math_verify"
+# flash-attn is x86-CUDA-only; NPU uses --attn_impl sdpa via torch-npu.
+# liger_kernel (CUDA-only) and nvitop (NVIDIA monitoring) are excluded.
 
 # --- Verification ---
 log "Verifying NPU + vllm + ms-swift install"

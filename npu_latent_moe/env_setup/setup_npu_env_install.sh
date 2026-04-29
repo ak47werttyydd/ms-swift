@@ -22,12 +22,16 @@ set -euo pipefail
 ENV_NAME="${ENV_NAME:-ms-swift}"
 PY_VERSION="${PY_VERSION:-3.11}"
 
-VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-$HOME/Code/vllm-ascend}"
-MS_SWIFT_DIR="${MS_SWIFT_DIR:-$HOME/Code/ms-swift}"
-VLLM_DIR="${VLLM_DIR:-$HOME/Code/vllm}"
+VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
+MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
+VLLM_DIR="${VLLM_DIR:-/home/w00498690/gdn_post_train/vllm}"
 
 VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"
+
+# SOC_VERSION: required by vllm-ascend source install (CPU-only/empty build path).
+# 910B1 = ascend910b1 (Atlas A2); 910B3/B4 = ascend910_9391 (Atlas A3).
+SOC_VERSION="${SOC_VERSION:-ascend910b1}"
 
 USE_CN_MIRROR="${USE_CN_MIRROR:-0}"
 
@@ -59,11 +63,12 @@ if [[ "$USE_CN_MIRROR" == "1" ]]; then
 fi
 
 # --- torch + torch-npu ---
-# Install torch-npu from Ascend mirror; it pulls the aarch64-compatible torch 2.9.0.
-# Do NOT install torch from pytorch.org — those wheels are x86_64 only.
+# torch-npu is on Huawei's Ascend mirror (not PyPI). Use --extra-index-url so
+# pip still resolves other packages from PyPI; do NOT use -i (replaces PyPI entirely).
+# torch 2.9.0 (aarch64) is pulled automatically as a torch-npu dependency.
 log "Installing torch-npu==2.9.0 (pulls aarch64 torch 2.9.0)"
 pip install "torch-npu==2.9.0" decorator \
-    -i https://mirrors.huaweicloud.com/ascend/repos/pypi/simple
+    --extra-index-url https://mirrors.huaweicloud.com/ascend/repos/pypi
 
 # --- vllm (matched tag), source install with NPU-skip target ---
 if [[ ! -d "$VLLM_DIR/.git" ]]; then
@@ -84,7 +89,8 @@ fi
     log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"
     git fetch --all --tags
     git checkout "$VLLM_ASCEND_BRANCH"
-    pip install -v -e .
+    git submodule update --init --recursive
+    SOC_VERSION="$SOC_VERSION" pip install -v -e .
 )
 
 # --- ms-swift ---
@@ -101,7 +107,8 @@ pip install "deepspeed<0.19" "trl>=0.15,<0.30" "peft>=0.11,<0.19" \
             "transformers>=4.57.4,<5.6" "accelerate" \
             "tensorboard" "swanlab" \
             "modelscope>=1.23" "datasets>=3.0,<4.0" \
-            "math_verify" "liger_kernel" "nvitop"
+            "math_verify"
 # flash-attn is x86-CUDA-only; NPU uses --attn_impl sdpa via torch-npu.
+# liger_kernel (CUDA-only) and nvitop (NVIDIA monitoring) are excluded.
 
 log "Install complete. Run setup_npu_env_verify.sh (with CANN sourced) to validate."

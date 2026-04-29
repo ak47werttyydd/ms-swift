@@ -29,19 +29,23 @@ PY_VERSION="${PY_VERSION:-3.11}"
 CANN_SETENV="${CANN_SETENV:-/usr/local/Ascend/ascend-toolkit/set_env.sh}"
 NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
 
-VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-$HOME/Code/vllm-ascend}"
-MS_SWIFT_DIR="${MS_SWIFT_DIR:-$HOME/Code/ms-swift}"
-VLLM_DIR="${VLLM_DIR:-$HOME/Code/vllm}"
+VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
+MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
+VLLM_DIR="${VLLM_DIR:-/home/w00498690/gdn_post_train/vllm}"
 
 # MindSpeed stack
-MEGATRON_LM_REPO="${MEGATRON_LM_REPO:-$HOME/Code/Megatron-LM}"
+MEGATRON_LM_REPO="${MEGATRON_LM_REPO:-/home/w00498690/gdn_post_train/Megatron-LM}"
 MEGATRON_LM_TAG="${MEGATRON_LM_TAG:-v0.15.3}"
-MINDSPEED_REPO="${MINDSPEED_REPO:-$HOME/Code/MindSpeed}"
+MINDSPEED_REPO="${MINDSPEED_REPO:-/home/w00498690/gdn_post_train/MindSpeed}"
 MINDSPEED_BRANCH="${MINDSPEED_BRANCH:-core_r0.15.3}"
-MCORE_BRIDGE_REPO="${MCORE_BRIDGE_REPO:-$HOME/Code/mcore-bridge}"
+MCORE_BRIDGE_REPO="${MCORE_BRIDGE_REPO:-/home/w00498690/gdn_post_train/mcore-bridge}"
 
 VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"
+
+# SOC_VERSION: required at runtime and by vllm-ascend source install.
+# 910B1 = ascend910b1 (Atlas A2); 910B3/B4 = ascend910_9391 (Atlas A3).
+SOC_VERSION="${SOC_VERSION:-ascend910b1}"
 
 USE_CN_MIRROR="${USE_CN_MIRROR:-0}"
 
@@ -63,6 +67,7 @@ if [[ -f "$NNAL_SETENV" ]]; then
     # shellcheck disable=SC1090
     source "$NNAL_SETENV"
 fi
+export SOC_VERSION
 
 # --- conda env ---
 eval "$(conda shell.bash hook)"
@@ -86,7 +91,7 @@ fi
 # Do NOT install torch from pytorch.org — those wheels are x86_64 only.
 log "Installing torch-npu==2.9.0 (pulls aarch64 torch 2.9.0)"
 pip install "torch-npu==2.9.0" decorator \
-    -i https://mirrors.huaweicloud.com/ascend/repos/pypi/simple
+    --extra-index-url https://mirrors.huaweicloud.com/ascend/repos/pypi
 
 # --- apex-ascend (Megatron fused optimizer / fused layernorm) ---
 # The Ascend fork of NVIDIA/apex. Install from Huawei's pypi mirror.
@@ -94,7 +99,7 @@ pip install "torch-npu==2.9.0" decorator \
 # will fall back to Python implementations (slower) when apex is missing.
 log "Installing apex-ascend (optional but recommended for Megatron perf)"
 pip install apex-ascend \
-    -i https://mirrors.huaweicloud.com/ascend/repos/pypi/simple \
+    --extra-index-url https://mirrors.huaweicloud.com/ascend/repos/pypi \
     || log "apex-ascend install failed — continuing without fused apex ops."
 
 # --- vLLM (matched tag), teacher-side; NPU-skip target ---
@@ -114,6 +119,7 @@ fi
     log "Checking out vllm-ascend branch $VLLM_ASCEND_BRANCH"
     git fetch --all --tags
     git checkout "$VLLM_ASCEND_BRANCH"
+    git submodule update --init --recursive
     pip install -v -e .
 )
 
