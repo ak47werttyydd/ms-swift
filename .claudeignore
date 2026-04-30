@@ -1,0 +1,13 @@
+# Checkpoints
+ckpt*/
+checkpoint*/
+output*/
+*.pt
+*.safetensors
+*.bin
+# HuggingFace cache
+.cache/
+# 数据集
+data/
+*.parquet
+*.arrow

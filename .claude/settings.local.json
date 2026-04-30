@@ -17,7 +17,12 @@
       "Bash(nvcc:*)",
       "Bash(pip freeze:*)",
       "Bash(apt list:*)",
-      "Bash(ldconfig -p)"
+      "Bash(ldconfig -p)",
+      "Bash(awk '/Train:  10.*10\\\\/1000/ {t1=NR} /Train:  11.*11\\\\/1000/ {t2=NR; exit} END {print \"lines between step10 and step11:\", t2-t1}' /home/a84400789/ms-swift/log/gkd_100S40L_infS24L.log)",
+      "Bash(awk 'NR>100 && NR<500')",
+      "Bash(head -n 50400 teacher_presample_shard2.jsonl)",
+      "Bash(tail -n +50401 teacher_presample_shard2.jsonl)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
