@@ -61,8 +61,10 @@ log "Sourcing CANN toolkit: $CANN_SETENV"
 # shellcheck disable=SC1090
 source "$CANN_SETENV"
 if [[ -f "$NNAL_SETENV" ]]; then
+    set +u  # Huawei set_env.sh reads $ZSH_VERSION which is unset in bash
     # shellcheck disable=SC1090
     source "$NNAL_SETENV"
+    set -u
 else
     log "NNAL set_env.sh not found at $NNAL_SETENV — libatb.so features may be unavailable."
 fi

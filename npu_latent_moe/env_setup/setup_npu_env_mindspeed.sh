@@ -65,8 +65,10 @@ log "Sourcing CANN toolkit: $CANN_SETENV"
 # shellcheck disable=SC1090
 source "$CANN_SETENV"
 if [[ -f "$NNAL_SETENV" ]]; then
+    set +u  # Huawei set_env.sh reads $ZSH_VERSION which is unset in bash
     # shellcheck disable=SC1090
     source "$NNAL_SETENV"
+    set -u
 fi
 export SOC_VERSION
 export GIT_SSL_NO_VERIFY=true
