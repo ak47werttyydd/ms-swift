@@ -9,8 +9,8 @@
 set -euo pipefail
 
 ENV_NAME="${ENV_NAME:-ms-swift}"
-CANN_SETENV="${CANN_SETENV:-/usr/local/Ascend/ascend-toolkit/set_env.sh}"
-NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
+CANN_SETENV="${CANN_SETENV:-/home/w00498690/gdn_post_train/CANN8.5.1/cann-8.5.1/set_env.sh}"
+NNAL_SETENV="${NNAL_SETENV:-/home/w00498690/gdn_post_train/CANN8.5.1/nnal/atb/set_env.sh}"
 # 910B1 = ascend910b1 (Atlas A2); 910B3/B4 = ascend910_9391 (Atlas A3).
 SOC_VERSION="${SOC_VERSION:-ascend910b1}"
 

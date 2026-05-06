@@ -2,9 +2,9 @@
 # -----------------------------------------------------------------------------
 # Install-only: conda env + Python packages for the Qwen3.5 GKD NPU workflow.
 #
-# Does NOT source CANN — all steps are pure pip/conda and work without CANN
-# in the current shell. Run setup_npu_env_verify.sh afterwards (with CANN
-# sourced) to confirm the NPU stack is functional.
+# Sources CANN only for the vllm-ascend step (custom ACLNN ops require
+# bisheng from CANN; all other steps are pure pip/conda).
+# Run setup_npu_env_verify.sh afterwards to confirm the full NPU stack.
 #
 # Usage:
 #   bash npu_latent_moe/env_setup/setup_npu_env_install.sh
@@ -21,6 +21,8 @@ set -euo pipefail
 # --------------------------- User-tunable paths ------------------------------
 ENV_NAME="${ENV_NAME:-ms-swift}"
 PY_VERSION="${PY_VERSION:-3.11}"
+CANN_SETENV="${CANN_SETENV:-/home/w00498690/gdn_post_train/CANN8.5.1/cann-8.5.1/set_env.sh}"
+NNAL_SETENV="${NNAL_SETENV:-/home/w00498690/gdn_post_train/CANN8.5.1/nnal/atb/set_env.sh}"
 
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
@@ -88,6 +90,18 @@ fi
     fi
 )
 
+# --- Source CANN (required for vllm-ascend custom op compilation) ---
+# vllm-ascend's csrc/build_aclnn.sh needs bisheng (Huawei C++ compiler) and
+# ASCEND_HOME_PATH, both of which are only available after sourcing set_env.sh.
+[[ -f "$CANN_SETENV" ]] || die "CANN set_env.sh not found at $CANN_SETENV — required for vllm-ascend build."
+# shellcheck disable=SC1090
+source "$CANN_SETENV"
+if [[ -f "$NNAL_SETENV" ]]; then
+    # shellcheck disable=SC1090
+    source "$NNAL_SETENV"
+fi
+export SOC_VERSION
+
 # --- vllm-ascend ---
 if [[ ! -d "$VLLM_ASCEND_DIR/.git" ]]; then
     log "Cloning vllm-ascend @ $VLLM_ASCEND_BRANCH → $VLLM_ASCEND_DIR"
@@ -106,7 +120,7 @@ fi
             git checkout "$VLLM_ASCEND_BRANCH"
         fi
         git submodule update --init --recursive
-        SOC_VERSION="$SOC_VERSION" pip install -v -e .
+        pip install -v -e .
     fi
 )
 

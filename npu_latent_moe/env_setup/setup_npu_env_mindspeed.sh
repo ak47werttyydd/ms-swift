@@ -26,8 +26,8 @@ set -euo pipefail
 # --------------------------- User-tunable paths ------------------------------
 ENV_NAME="${ENV_NAME:-ms-swift-mindspeed}"
 PY_VERSION="${PY_VERSION:-3.11}"
-CANN_SETENV="${CANN_SETENV:-/usr/local/Ascend/ascend-toolkit/set_env.sh}"
-NNAL_SETENV="${NNAL_SETENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"
+CANN_SETENV="${CANN_SETENV:-/home/w00498690/gdn_post_train/CANN8.5.1/cann-8.5.1/set_env.sh}"
+NNAL_SETENV="${NNAL_SETENV:-/home/w00498690/gdn_post_train/CANN8.5.1/nnal/atb/set_env.sh}"
 
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/w00498690/gdn_post_train/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/w00498690/gdn_post_train/ms-swift}"
