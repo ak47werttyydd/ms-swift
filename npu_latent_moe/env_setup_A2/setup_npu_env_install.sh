@@ -145,4 +145,11 @@ pip install "torch==2.9.0" \
 # flash-attn is x86-CUDA-only; NPU uses --attn_impl sdpa via torch-npu.
 # liger_kernel (CUDA-only) and nvitop (NVIDIA monitoring) are excluded.
 
+# --- setuptools downgrade ---
+# setuptools >= 70 drops the bundled pkg_resources; many transitive deps
+# (deepspeed, mindspeed, older trl helpers) still `import pkg_resources`.
+# Pin to 68.x so import succeeds. Run last so nothing upgrades it back.
+log "Pinning setuptools==68.0 to keep pkg_resources available"
+pip install "setuptools==68.0"
+
 log "Install complete. Run setup_npu_env_verify.sh (with CANN sourced) to validate."

@@ -199,6 +199,13 @@ pip install "torch==2.9.0" \
 # Note: flash-attn (Dao-AILab) is NOT installed. Megatron on NPU routes
 # `--attention_backend flash` to torch_npu.npu_fusion_attention via MindSpeed.
 
+# --- setuptools downgrade ---
+# setuptools >= 70 drops the bundled pkg_resources; many transitive deps
+# (deepspeed, mindspeed, older trl helpers) still `import pkg_resources`.
+# Pin to 68.x so import succeeds. Run last so nothing upgrades it back.
+log "Pinning setuptools==68.0 to keep pkg_resources available"
+pip install "setuptools==68.0"
+
 # --- Persist env vars into conda activate.d so every new shell has them ---
 ACTIVATE_D="$CONDA_PREFIX/etc/conda/activate.d"
 mkdir -p "$ACTIVATE_D"
