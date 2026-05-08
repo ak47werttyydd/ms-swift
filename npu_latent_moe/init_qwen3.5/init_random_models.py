@@ -58,27 +58,44 @@ def param_count(model) -> str:
 
 def create_random_model(hf_id: str, dtype: torch.dtype, device: torch.device):
     import json, shutil, tempfile
+    import transformers
     from huggingface_hub import hf_hub_download
-    from transformers import AutoConfig, AutoModelForCausalLM
+    from transformers import AutoConfig
 
     print(f"  Downloading config.json from HuggingFace: {hf_id}", flush=True)
     config_file = hf_hub_download(repo_id=hf_id, filename="config.json")
     with open(config_file) as f:
         config_dict = json.load(f)
 
-    # Write to a temp dir so AutoConfig resolves the model type via the local
-    # file — avoids trust_remote_code config classes that may not expose
-    # vocab_size as a standard PretrainedConfig attribute.
+    # Qwen3.5 configs are VL (*ForConditionalGeneration): vocab_size lives
+    # under text_config, not at top level. Patch both the dict and the
+    # resolved cfg objects so downstream init doesn't KeyError.
+    text_vocab = config_dict.get("vocab_size")
+    if text_vocab is None and "text_config" in config_dict:
+        text_vocab = config_dict["text_config"].get("vocab_size")
+
     tmp = Path(tempfile.mkdtemp())
     try:
         (tmp / "config.json").write_text(json.dumps(config_dict))
         cfg = AutoConfig.from_pretrained(tmp)
-        # Patch vocab_size in case the config class didn't forward it to super()
-        if not hasattr(cfg, "vocab_size"):
-            cfg.vocab_size = config_dict["vocab_size"]
-        print("  Randomly initializing weights on CPU ...", flush=True)
+        if not hasattr(cfg, "vocab_size") and text_vocab is not None:
+            cfg.vocab_size = text_vocab
+        if hasattr(cfg, "text_config") and not hasattr(cfg.text_config, "vocab_size"):
+            cfg.text_config.vocab_size = text_vocab
+
+        archs = config_dict.get("architectures") or []
+        if not archs:
+            raise RuntimeError(f"config.json for {hf_id} has no 'architectures' field")
+        arch = archs[0]
+        ModelClass = getattr(transformers, arch, None)
+        if ModelClass is None:
+            raise RuntimeError(
+                f"transformers {transformers.__version__} does not export {arch}. "
+                f"Upgrade transformers to a version that supports Qwen3.5."
+            )
+        print(f"  Randomly initializing {arch} on CPU ...", flush=True)
         with torch.device("cpu"):
-            model = AutoModelForCausalLM.from_config(cfg, torch_dtype=dtype)
+            model = ModelClass._from_config(cfg, torch_dtype=dtype)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
