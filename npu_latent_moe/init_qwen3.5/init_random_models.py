@@ -36,17 +36,6 @@ MODELS = {
 }
 
 
-def _init_npu(npu_id: int) -> torch.device:
-    try:
-        import torch_npu  # noqa: F401
-        if not (hasattr(torch, "npu") and torch.npu.is_available()):
-            raise RuntimeError("torch_npu is installed but no NPU device found.")
-        torch.npu.set_device(npu_id)
-        return torch.device(f"npu:{npu_id}")
-    except ImportError:
-        raise RuntimeError("torch_npu not installed. Use --device cpu or install torch_npu.")
-
-
 def _dtype(name: str) -> torch.dtype:
     return {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}[name]
 
@@ -56,7 +45,7 @@ def param_count(model) -> str:
     return f"{total/1e9:.2f}B" if total >= 1e9 else f"{total/1e6:.2f}M"
 
 
-def create_random_model(hf_id: str, dtype: torch.dtype, device: torch.device):
+def create_random_model(hf_id: str, dtype: torch.dtype):
     import json, shutil, tempfile
     import transformers
     from huggingface_hub import hf_hub_download
@@ -95,13 +84,9 @@ def create_random_model(hf_id: str, dtype: torch.dtype, device: torch.device):
             )
         print(f"  Randomly initializing {arch} on CPU ...", flush=True)
         with torch.device("cpu"):
-            model = ModelClass._from_config(cfg, torch_dtype=dtype)
+            model = ModelClass._from_config(cfg, dtype=dtype)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-
-    if device.type != "cpu":
-        print(f"  Moving model to {device} ...", flush=True)
-        model = model.to(device)
 
     return model
 
@@ -139,8 +124,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    device = _init_npu(args.npu_id) if args.device == "npu" else torch.device("cpu")
-    print(f"Device: {device}  dtype: {args.dtype}", flush=True)
+    if args.device == "npu":
+        print("NOTE: --device npu is ignored; weights are initialized on CPU "
+              "(35B model does not fit on a single NPU and ckpt is device-agnostic).",
+              flush=True)
+    print(f"Device: cpu  dtype: {args.dtype}", flush=True)
 
     dtype = _dtype(args.dtype)
     keys = ["moe", "dense"] if args.model == "both" else [args.model]
@@ -150,7 +138,7 @@ def main() -> None:
         print(f"\n{'='*60}", flush=True)
         print(f"Creating {info['label']}", flush=True)
 
-        model = create_random_model(info["hf_id"], dtype, device)
+        model = create_random_model(info["hf_id"], dtype)
         print(f"  Parameters: {param_count(model)}", flush=True)
 
         save_model(model, info["out_dir"], info["hf_id"], not args.no_tokenizer)
