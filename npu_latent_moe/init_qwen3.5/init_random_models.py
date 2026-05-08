@@ -57,14 +57,30 @@ def param_count(model) -> str:
 
 
 def create_random_model(hf_id: str, dtype: torch.dtype, device: torch.device):
+    import json, shutil, tempfile
+    from huggingface_hub import hf_hub_download
     from transformers import AutoConfig, AutoModelForCausalLM
 
-    print(f"  Fetching config from HuggingFace: {hf_id}", flush=True)
-    cfg = AutoConfig.from_pretrained(hf_id, trust_remote_code=True)
+    print(f"  Downloading config.json from HuggingFace: {hf_id}", flush=True)
+    config_file = hf_hub_download(repo_id=hf_id, filename="config.json")
+    with open(config_file) as f:
+        config_dict = json.load(f)
 
-    print("  Randomly initializing weights on CPU ...", flush=True)
-    with torch.device("cpu"):
-        model = AutoModelForCausalLM.from_config(cfg, torch_dtype=dtype, trust_remote_code=True)
+    # Write to a temp dir so AutoConfig resolves the model type via the local
+    # file — avoids trust_remote_code config classes that may not expose
+    # vocab_size as a standard PretrainedConfig attribute.
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        (tmp / "config.json").write_text(json.dumps(config_dict))
+        cfg = AutoConfig.from_pretrained(tmp)
+        # Patch vocab_size in case the config class didn't forward it to super()
+        if not hasattr(cfg, "vocab_size"):
+            cfg.vocab_size = config_dict["vocab_size"]
+        print("  Randomly initializing weights on CPU ...", flush=True)
+        with torch.device("cpu"):
+            model = AutoModelForCausalLM.from_config(cfg, torch_dtype=dtype)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
     if device.type != "cpu":
         print(f"  Moving model to {device} ...", flush=True)
@@ -98,8 +114,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--device", choices=["npu", "cpu"], default="cpu",
                    help="Device for weight init (cpu is fine; ckpt is device-agnostic)")
     p.add_argument("--npu-id", type=int, default=0)
-    p.add_argument("--save-tokenizer", action="store_true",
-                   help="Also download and save the tokenizer")
+    p.add_argument("--no-tokenizer", action="store_true",
+                   help="Skip downloading and saving the tokenizer")
     return p.parse_args()
 
 
@@ -120,7 +136,7 @@ def main() -> None:
         model = create_random_model(info["hf_id"], dtype, device)
         print(f"  Parameters: {param_count(model)}", flush=True)
 
-        save_model(model, info["out_dir"], info["hf_id"], args.save_tokenizer)
+        save_model(model, info["out_dir"], info["hf_id"], not args.no_tokenizer)
 
     print(f"\nDone. Checkpoints saved under {SCRIPT_DIR}", flush=True)
 
