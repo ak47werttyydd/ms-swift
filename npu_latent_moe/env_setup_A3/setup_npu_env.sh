@@ -37,7 +37,7 @@ NNAL_SETENV="${NNAL_SETENV:-/home/canada_group_account/a84400789/CANN8.5.1/nnal/
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/canada_group_account/a84400789/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/canada_group_account/a84400789/ms-swift}"
 VLLM_DIR="${VLLM_DIR:-/home/canada_group_account/a84400789/vllm}"
-VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/cosdt/vllm-ascend}"
+VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/vllm-project/vllm-ascend}"
 
 VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"   # matches vllm-ascend releases/v0.18.0 CI

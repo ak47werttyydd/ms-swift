@@ -32,7 +32,7 @@ NNAL_SETENV="${NNAL_SETENV:-/home/canada_group_account/a84400789/CANN8.5.1/nnal/
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/canada_group_account/a84400789/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/canada_group_account/a84400789/ms-swift}"
 VLLM_DIR="${VLLM_DIR:-/home/canada_group_account/a84400789/vllm}"
-VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/cosdt/vllm-ascend}"
+VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/vllm-project/vllm-ascend}"
 
 # MindSpeed stack
 MEGATRON_LM_REPO="${MEGATRON_LM_REPO:-/home/canada_group_account/a84400789/Megatron-LM}"
