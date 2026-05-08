@@ -946,6 +946,82 @@ def patch_vllm_moe_model_weight_loader(model):
     original_model._swift_moe_weight_loader_patched = True
 
 
+def patch_vllm_mrope_for_text_only(model):
+    """Patch a vLLM model instance to satisfy the SupportsMRoPE interface for text-only inference.
+
+    When a multimodal model (e.g., Qwen3_5LatentMoeForConditionalGeneration) is loaded via
+    vLLM's TransformersMoEForCausalLM, the model config may have `mrope_section` in
+    rope_parameters, causing vLLM to call `_init_mrope_positions` during execute_model.
+    TransformersMoEForCausalLM does not implement SupportsMRoPE, so the assert fails.
+
+    For text-only GKD rollouts (no visual tokens), M-RoPE positions are identical to
+    standard 1D positions: all 3 sub-dimensions share the same sequential indices.
+    """
+    import types
+    import numpy as np
+
+    if getattr(model, '_swift_mrope_patched', False):
+        return
+
+    def _get_mrope_input_positions(self, input_tokens, mm_features):
+        n = len(input_tokens)
+        pos = np.broadcast_to(np.arange(n, dtype=np.int64), (3, n)).copy()
+        return torch.from_numpy(pos), 0
+
+    model.supports_mrope = True
+    model.get_mrope_input_positions = types.MethodType(_get_mrope_input_positions, model)
+    model._swift_mrope_patched = True
+
+
+def patch_deepspeed_zero3_for_moe():
+    """Disable ZeRO-3 trace assertion that breaks MoE models with dynamic expert routing.
+
+    DeepSpeed ZeRO-3's reset_step asserts that all data-parallel ranks visited
+    the same sequence of sub-modules. This works for dense Transformers but
+    fails for MoE models: different ranks process batches of different lengths,
+    leading to different numbers of expert module activations via dynamic routing.
+
+    This patch replaces reset_step with a version that always stays in INVALID
+    trace mode, using on-demand parameter fetching instead of trace-based
+    prefetching. The forward pass is fully correct; only the prefetch
+    optimization is disabled.
+    """
+    import collections as _collections
+    try:
+        from deepspeed.runtime.zero.partitioned_param_coordinator import (
+            PartitionedParameterCoordinator, ZeRoTraceMode,
+        )
+    except ImportError:
+        return
+
+    if getattr(PartitionedParameterCoordinator, '_swift_moe_patched', False):
+        return
+
+    _P = '_PartitionedParameterCoordinator__'
+
+    def _reset_step_no_assert(self):
+        self._clean_inflight_param_registry()
+        setattr(self, _P + 'trace_mode', ZeRoTraceMode.INVALID)
+        setattr(self, _P + 'submodule_order', [])
+        setattr(self, _P + 'param_order', [])
+        setattr(self, _P + 'param_queue', _collections.deque())
+        setattr(self, _P + 'most_recent_step_id_param_fetched_for',
+                _collections.defaultdict(lambda: int(-1e10)))
+        setattr(self, _P + 'step_id_module_fetched_for',
+                _collections.defaultdict(lambda: _collections.deque()))
+        setattr(self, _P + 'step_id', 0)
+        setattr(self, _P + 'n_available_params', 0)
+        profiler = getattr(self, _P + 'profiler', None)
+        if profiler is not None:
+            profiler.reset_events()
+        leaf_events = getattr(self, _P + 'ongoing_fetch_leaf_module_events', None)
+        if leaf_events is not None:
+            leaf_events.clear()
+
+    PartitionedParameterCoordinator.reset_step = _reset_step_no_assert
+    PartitionedParameterCoordinator._swift_moe_patched = True
+
+
 def patch_vllm_load_adapter():
     from vllm.lora.worker_manager import LRUCacheWorkerLoRAManager
     try:

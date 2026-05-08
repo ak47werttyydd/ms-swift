@@ -1154,6 +1154,27 @@ register_model(
         tags=['vision', 'video']))
 
 
+class Qwen3_5LatentMoeLoader(ModelLoader):
+    # LatentMoE uses a custom class via auto_map in config.json (molae_qwen35_latentmoe.py).
+    # Every parent VL loader overrides auto_model_cls to a concrete transformers class,
+    # which bypasses auto_map entirely.  By inheriting directly from ModelLoader and
+    # not setting auto_model_cls, AutoModelForCausalLM + trust_remote_code uses
+    # auto_map to resolve Qwen3_5LatentMoeForConditionalGeneration correctly.
+    pass
+
+
+register_model(
+    ModelMeta(
+        'qwen3_5_latentmoe',
+        [],
+        Qwen3_5LatentMoeLoader,
+        template=TemplateType.qwen3_5,
+        model_arch=ModelArch.qwen2_vl,
+        architectures=['Qwen3_5LatentMoeForConditionalGeneration'],
+        requires=['transformers>=5.2.0', 'qwen_vl_utils>=0.0.14', 'decord'],
+        tags=['vision', 'video']))
+
+
 class Qwen3_5Loader(Qwen3VLLoader):
 
     def get_model(self, model_dir: str, config, processor, model_kwargs) -> PreTrainedModel:

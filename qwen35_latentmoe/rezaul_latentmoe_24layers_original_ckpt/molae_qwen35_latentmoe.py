@@ -10,6 +10,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from transformers.models.qwen3_5_moe.modeling_qwen3_5_moe import (
         Qwen3_5MoeForCausalLM,
@@ -21,7 +24,69 @@ try:
         Qwen3_5MoeTopKRouter,
     )
     from transformers.models.qwen3_5_moe.configuration_qwen3_5_moe import Qwen3_5MoeConfig
+    import transformers.models.qwen3_5_moe.modeling_qwen3_5_moe as _qwen35_moe_module
+
+    def _memory_efficient_load_balancing_loss_func(gate_logits, num_experts, top_k=2, attention_mask=None):
+        """Memory-efficient drop-in replacement for transformers' load_balancing_loss_func.
+
+        The stock implementation concatenates all layers into a [total_tokens, top_k,
+        num_experts] tensor before calling one_hot → .float(), which allocates 8-16 GiB
+        for a 24-layer model with batch×seq=20480.  This version processes one layer at
+        a time, keeping peak allocation to ~320 MB regardless of layer count.
+
+        The numerics are identical to the original (same formula, same result).
+        """
+        if gate_logits is None or not isinstance(gate_logits, tuple):
+            return 0
+
+        compute_device = gate_logits[0].device
+
+        # Running accumulators — small tensors, layer count doesn't matter.
+        tokens_num = torch.zeros(top_k, num_experts, dtype=torch.float32, device=compute_device)
+        tokens_den = torch.zeros(top_k, num_experts, dtype=torch.float32, device=compute_device)
+        prob_num = torch.zeros(num_experts, dtype=torch.float32, device=compute_device)
+        prob_den = torch.zeros(num_experts, dtype=torch.float32, device=compute_device)
+
+        for layer_gate in gate_logits:
+            layer_gate = layer_gate.to(compute_device)
+            n = layer_gate.shape[0]  # batch × seq_len for this layer
+
+            routing_weights = torch.nn.functional.softmax(layer_gate.float(), dim=-1)
+            _, selected_experts = torch.topk(routing_weights, top_k, dim=-1)
+
+            # Build float32 expert_mask directly — skips int64 one_hot intermediate.
+            # Peak: [n, top_k, num_experts] × 4 bytes = ~320 MB per layer vs 8+ GiB total.
+            expert_mask = torch.zeros(n, top_k, num_experts, dtype=torch.float32, device=compute_device)
+            expert_mask.scatter_(2, selected_experts.unsqueeze(2), 1.0)
+
+            if attention_mask is not None:
+                # attention_mask: [batch, seq_len], reshape to [n]
+                attn = attention_mask.reshape(-1).float().to(compute_device)          # [n]
+                attn_3d = attn[:, None, None].expand(n, top_k, num_experts)           # [n, top_k, num_experts]
+                tokens_num += (expert_mask * attn_3d).sum(dim=0)                      # [top_k, num_experts]
+                tokens_den += attn_3d.sum(dim=0)
+                attn_2d = attn[:, None].expand(n, num_experts)                        # [n, num_experts]
+                prob_num += (routing_weights * attn_2d).sum(dim=0)                   # [num_experts]
+                prob_den += attn_2d.sum(dim=0)
+            else:
+                tokens_num += expert_mask.sum(dim=0)
+                tokens_den += n
+                prob_num += routing_weights.sum(dim=0)
+                prob_den += n
+
+            del expert_mask
+
+        tokens_per_expert = tokens_num / tokens_den.clamp(min=1e-9)      # [top_k, num_experts]
+        router_prob_per_expert = prob_num / prob_den.clamp(min=1e-9)      # [num_experts]
+
+        overall_loss = torch.sum(tokens_per_expert * router_prob_per_expert.unsqueeze(0))
+        return overall_loss * num_experts
+
+    # Patch at import time so every call-site in modeling_qwen3_5_moe uses our version.
+    _qwen35_moe_module.load_balancing_loss_func = _memory_efficient_load_balancing_loss_func
+
 except Exception:
+    logger.error("from transformers.models.qwen3_5_moe.configuration_qwen3_5_moe import Qwen3_5MoeConfig fails")
     Qwen3_5MoeForCausalLM = nn.Module  # type: ignore[assignment]
     Qwen3_5MoeForConditionalGeneration = nn.Module  # type: ignore[assignment]
     Qwen3_5MoeModel = nn.Module  # type: ignore[assignment]
@@ -547,9 +612,46 @@ class Qwen3_5LatentMoeForConditionalGeneration(Qwen3_5MoeForConditionalGeneratio
         text_config = getattr(self.config, "text_config", self.config)
         _replace_sparse_moe_blocks_with_latent(self, text_config)
 
-    
-    # def save_pretrained(self):
-    #     transformers.auto.save_pretained(self)
+    def forward(self, *args, **kwargs):
+        if kwargs.get("output_router_logits") is None:
+            if self.training:
+                # Always enable aux_loss during training regardless of config value.
+                # (config.json has output_router_logits=False to prevent expert_mask
+                # creation during vLLM profiling; we override here so training still
+                # computes load-balancing loss.)
+                kwargs["output_router_logits"] = True
+                if not getattr(self, "_aux_loss_status_logged", False):
+                    text_config = getattr(self.config, "text_config", self.config)
+                    coef = getattr(text_config, "router_aux_loss_coef", None)
+                    logger.warning(
+                        f"[LatentMoE] output_router_logits=True (hardcoded), "
+                        f"router_aux_loss_coef={coef} — aux_loss ENABLED"
+                    )
+                    self._aux_loss_status_logged = True
+            else:
+                # Suppress during vLLM profiling/inference (eval mode).
+                # config.json also has output_router_logits=False as a belt-and-suspenders
+                # fix, but we set it explicitly here too so any code path is safe.
+                kwargs["output_router_logits"] = False
+
+        # Disable during lm-eval
+        # if not self.training and kwargs.get("logits_to_keep") is None:
+        #     # During vLLM profiling, the HF lm_head produces a full logits tensor
+        #     # [batch, max_num_tokens, vocab_size] = [1, 20480, 248320] ≈ 9.7 GB.
+        #     # vLLM's Base.forward() discards these logits entirely (it extracts hidden
+        #     # states and runs its own parallel lm_head). Limiting to 1 token cuts the
+        #     # wasted allocation from 9.7 GB to < 1 MB, which reclaims ~13 GB of
+        #     # torch_peak_increase headroom for the KV cache profiling budget.
+        #     kwargs["logits_to_keep"] = 1
+
+        out = super().forward(*args, **kwargs)
+        # Log aux_loss on rank 0 every micro-batch for monitoring.
+        if self.training and torch.distributed.get_rank() == 0 and getattr(out, "aux_loss", None) is not None:
+            if not hasattr(self, "_step"):
+                self._step = 0
+            self._step += 1
+            logger.warning(f"[aux_loss step {self._step}] {out.aux_loss.item():.6f}")
+        return out
 
 
 # -----------------------------------------------------------------------------

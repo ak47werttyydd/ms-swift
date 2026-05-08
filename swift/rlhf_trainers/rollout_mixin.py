@@ -38,7 +38,8 @@ from .rlhf_mixin import RLHFTrainerMixin
 from .utils import (FlattenedTensorBucket, TensorLoRARequest, _create_parameter_buckets,
                     _process_bucket_with_flattened_tensor, aggressive_empty_cache, check_vllm_version_ge,
                     get_even_process_data, get_gather_if_zero3_context, patch_lora_merge, patch_lora_unmerge,
-                    patch_vllm_load_adapter, patch_vllm_moe_model_weight_loader, profiling_context, profiling_decorator,
+                    patch_vllm_load_adapter, patch_vllm_moe_model_weight_loader, patch_vllm_mrope_for_text_only,
+                    profiling_context, profiling_decorator,
                     set_expandable_segments)
 
 DataType = List[Dict[str, Union[torch.Tensor, Any]]]
@@ -465,7 +466,23 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
             llm_model = self.engine.inner_model
             # Patch MoE weight_loader if needed
             patch_vllm_moe_model_weight_loader(llm_model)
-            llm_model.load_weights(state_dict.items())
+            # Patch M-RoPE interface for text-only inference.
+            # Multimodal models (e.g. Qwen3_5LatentMoeForConditionalGeneration) have mrope_section
+            # in their config, so vLLM sets uses_mrope=True and calls _init_mrope_positions.
+            # TransformersMoEForCausalLM doesn't implement SupportsMRoPE; this patch provides a
+            # text-only fallback (sequential positions for all 3 M-RoPE sub-dimensions).
+            patch_vllm_mrope_for_text_only(llm_model)
+            # When vLLM's TransformersMoEForCausalLM loaded a CausalLM via AutoModel
+            # (e.g. Qwen3_5LatentMoeForConditionalGeneration with its own lm_head),
+            # the vLLM model structure is: TransformersMoEForCausalLM.model = CausalLM.
+            # Training model parameter names are relative to CausalLM (e.g. model.visual.*),
+            # but vLLM expects names relative to TransformersMoEForCausalLM (model.model.visual.*).
+            # Adding a 'model.' prefix fixes the one-level mismatch.
+            if getattr(llm_model, '_model_is_causal_lm', False):
+                weights_iter = ((f'model.{k}', v) for k, v in state_dict.items())
+            else:
+                weights_iter = state_dict.items()
+            llm_model.load_weights(weights_iter)
         del state_dict
 
     def _fix_param_name_to_vllm(self, name: str, extra_prefixes: Optional[List[str]] = None) -> str:
@@ -655,6 +672,16 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
         should_merge = is_peft and not self._is_fsdp2 and not self.rollout_enable_lora
 
         gather_if_zero3 = get_gather_if_zero3_context(self)
+
+        # When move_model_batches is set, GatheredParameters gathers and frees one layer at a time.
+        # DeepSpeed's free_param() raises if ds_active_sub_modules is non-empty — a guard against
+        # concurrent forward-pass use. With LatentMoE, hook edge-cases can leave this set dirty even
+        # outside a forward pass. Clearing it here is safe: _move_full_model_to_vllm is always called
+        # between training steps, never inside a forward/backward pass.
+        if is_deepspeed_enabled():
+            for param in self.model.parameters():
+                if hasattr(param, 'ds_active_sub_modules') and param.ds_active_sub_modules:
+                    param.ds_active_sub_modules.clear()
 
         for i, parameter_group in enumerate(self.parameter_groups):
             parameter_group_no_lora = self.parameter_groups_no_lora[i]
@@ -912,6 +939,14 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
         args = self.args
         assert isinstance(args, RolloutTrainerArgumentsMixin)
 
+        # Offload optimizer to CPU before waking vLLM weights so the
+        # ZeRO-3 all-gather in _move_model_to_vllm has enough GPU headroom.
+        # The offload_context() below will reload the optimizer after rollout.
+        if (self.vllm_mode == 'colocate' and args.sleep_level > 0 and self.enable_offload
+                and getattr(args, 'offload_optimizer', False) and getattr(self, 'optimizer', None)):
+            self.offload_optimizer()
+            aggressive_empty_cache()
+
         if self.vllm_mode == 'colocate' and args.sleep_level > 0:
             if self.engine.inner_model_executor.is_sleeping:
                 wake_up_params = inspect.signature(self.engine.engine.wake_up).parameters
@@ -920,8 +955,19 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
                 self.engine.engine.wake_up(**kwargs)
 
         if self.state.global_step != self._last_loaded_step or args.sleep_level == 2:
+            if self.vllm_mode == 'colocate':
+                import torch.distributed as _dist
+                _rank = _dist.get_rank() if _dist.is_initialized() else 0
+                _alloc = torch.cuda.memory_allocated() / 1024**3
+                _res = torch.cuda.memory_reserved() / 1024**3
+                logger.info(
+                    f'[Rank {_rank}] PRE _move_model_to_vllm step={self.state.global_step}: '
+                    f'allocated={_alloc:.2f} GB, reserved={_res:.2f} GB')
             self._move_model_to_vllm()
             self._last_loaded_step = self.state.global_step
+            # Release PyTorch's caching pool back to CUDA after the all-gather
+            # so offload_context has contiguous physical memory for small allocations.
+            aggressive_empty_cache()
 
         context = self.offload_context if self.enable_offload else nullcontext
         with context():
@@ -1206,26 +1252,42 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
 
     @torch.no_grad()
     def offload_optimizer(self):
-        if not self.optimizer.state:
-            return
-
         if is_deepspeed_enabled():
-            # DeepSpeed optimizer: param_groups may be empty
+            # self.optimizer is an Accelerate AcceleratedOptimizer (no __getattr__ for arbitrary attrs).
+            # With BF16+ZeRO-3: self.optimizer.optimizer = BF16_Optimizer which has
+            #   fp32_groups_flat_partition (fp32 copy of each rank's param shard, ~8 GB/GPU).
+            # With FP16+ZeRO-3: self.optimizer.optimizer = DeepSpeedZeroOptimizer_Stage3 which has
+            #   fp32_partitioned_groups_flat.
+            # In both cases, unwrap one level to reach the DeepSpeed optimizer object.
+            inner_opt = getattr(self.optimizer, 'optimizer', self.optimizer)
+
+            # Offload fp32 master weights — allocated at optimizer init, live outside optimizer.state.
+            # Moving them frees ~8 GB per GPU before the vLLM all-gather in _move_model_to_vllm.
+            # Use .data assignment to preserve tensor identity (DeepSpeed holds references).
+            for attr_name in ('fp32_groups_flat_partition', 'fp32_partitioned_groups_flat'):
+                if hasattr(inner_opt, attr_name):
+                    for tensor in getattr(inner_opt, attr_name):
+                        if tensor.numel() > 0 and tensor.device.type != 'cpu':
+                            cpu_buf = torch.empty_like(tensor, device='cpu', pin_memory=True)
+                            cpu_buf.copy_(tensor, non_blocking=True)
+                            tensor.data = cpu_buf
+                    break  # only one of these attributes exists
+
+            # Offload Adam m/v states (lazily initialized on first step — may be empty)
             for _, state in self.optimizer.state.items():
-                # Iterate over a copy to avoid dict size change errors
                 for key, value in list(state.items()):
                     if not isinstance(value, torch.Tensor):
                         continue
-                    # Skip if already on CPU
                     if value.device.type == 'cpu':
                         continue
-
                     offload_key = f'{key}_offload_buffer'
                     if offload_key not in state:
                         state[offload_key] = torch.empty_like(value, device='cpu')
-
                     state[offload_key].copy_(value, non_blocking=True)
                     value.data = state[offload_key]
+            return
+
+        if not self.optimizer.state:
             return
 
         # Original non-DeepSpeed logic
@@ -1244,20 +1306,31 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
 
     @torch.no_grad()
     def load_optimizer(self):
-        if not self.optimizer.state:
-            return
-
         device = get_current_device()
 
         if is_deepspeed_enabled():
+            # Unwrap AcceleratedOptimizer to reach BF16_Optimizer or DeepSpeedZeroOptimizer_Stage3
+            inner_opt = getattr(self.optimizer, 'optimizer', self.optimizer)
+
+            # Reload fp32 master weights back to GPU (counterpart to offload_optimizer)
+            for attr_name in ('fp32_groups_flat_partition', 'fp32_partitioned_groups_flat'):
+                if hasattr(inner_opt, attr_name):
+                    for tensor in getattr(inner_opt, attr_name):
+                        if tensor.numel() > 0 and tensor.device.type == 'cpu':
+                            tensor.data = tensor.data.to(device, non_blocking=True)
+                    break
+
+            # Reload Adam m/v states
             for _, state in self.optimizer.state.items():
                 for key, value in list(state.items()):
                     if not isinstance(value, torch.Tensor):
                         continue
-
                     offload_key = f'{key}_offload_buffer'
                     if offload_key in state:
                         value.data = state[offload_key].to(device, non_blocking=True)
+            return
+
+        if not self.optimizer.state:
             return
 
         # Original non-DeepSpeed logic

@@ -21,8 +21,8 @@ from swift.trainers import SwiftMixin, disable_gradient_checkpointing
 from swift.utils import (JsonlWriter, get_logger, is_swanlab_available, is_wandb_available, remove_response, to_device,
                          unwrap_model_for_generation)
 from .rollout_mixin import DataType, RolloutTrainerMixin
-from .utils import (get_gather_if_zero3_context, identity_data_collator, prepare_deepspeed, profiling_context,
-                    profiling_decorator)
+from .utils import (aggressive_empty_cache, get_gather_if_zero3_context, identity_data_collator,
+                    patch_deepspeed_zero3_for_moe, prepare_deepspeed, profiling_context, profiling_decorator)
 
 try:
     from liger_kernel.chunked_loss import LigerFusedLinearJSDLoss
@@ -599,6 +599,15 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
                 encoded_inputs['_teacher_api_logprobs'] = teacher_logprobs
                 encoded_inputs['_teacher_api_indices'] = teacher_indices
 
+        # Release PyTorch's caching pool before the training forward/backward pass.
+        # After vLLM rollout + model reload, ~78 MiB sits in the pool as reserved-but-unallocated
+        # fragmented memory; without this the first 86 MiB allocation in training_step OOMs.
+        aggressive_empty_cache()
+        # Disable DeepSpeed ZeRO-3 trace recording for MoE compatibility.
+        # MoE dynamic routing activates different expert sets per rank (different batch lengths),
+        # causing reset_step's cross-rank assertion to fail. This patch uses on-demand
+        # parameter fetching instead of trace-based prefetching — correct but less efficient.
+        patch_deepspeed_zero3_for_moe()
         with self.template.forward_context(self.model, encoded_inputs):
             loss = HFSFTTrainer.training_step(self, model, encoded_inputs, num_items_in_batch)
         return loss
@@ -645,6 +654,10 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         try:
             yield
         finally:
+            # Release PyTorch's caching pool before reloading model back to GPU.
+            # After inference and vLLM sleep, fragmented cached memory can block
+            # the first ds_tensor allocation in load_model with a trivial OOM.
+            aggressive_empty_cache()
             # reload (load back) model when exiting context
             if self.args.offload_model:
                 self.load_model(self.accelerator.unwrap_model(self.model))

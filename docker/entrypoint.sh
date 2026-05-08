@@ -16,8 +16,8 @@ fi
 # ── Override transformers (must come after ms-swift to override vLLM's pin) ──
 # vLLM pins transformers to an older version; Qwen3.5 LatentMoE needs >=5.3.0
 # Ref: https://github.com/modelscope/ms-swift/issues/8188
-echo "=== Ensuring transformers>=5.3.0 ==="
-pip install -U "transformers>=5.3.0"
+echo "=== Ensuring transformers=5.3.0 ==="
+pip install "transformers==5.3.0"
 
 # ── Remove incompatible torchao ──────────────────────────────────────────────
 # vLLM installs torchao dev (0.16.0+git) which references
