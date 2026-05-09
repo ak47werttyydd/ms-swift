@@ -105,6 +105,17 @@ def save_model(model, out_dir: Path, hf_id: str, save_tokenizer: bool) -> None:
         except Exception as e:
             print(f"  WARN: tokenizer download failed ({e}); skipping.", flush=True)
 
+        # Multimodal Qwen3.5 (*ForConditionalGeneration) requires a processor —
+        # vLLM and HF refuse to load without preprocessor_config.json. Save it
+        # alongside the tokenizer so downstream loaders are happy.
+        try:
+            from transformers import AutoProcessor
+            print(f"  Downloading processor from {hf_id} ...", flush=True)
+            proc = AutoProcessor.from_pretrained(hf_id, trust_remote_code=True)
+            proc.save_pretrained(out_dir)
+        except Exception as e:
+            print(f"  WARN: processor download failed ({e}); skipping.", flush=True)
+
     print(f"  Saved → {out_dir}", flush=True)
 
 
