@@ -179,7 +179,7 @@ run_training \
         --seq_kd false \
         --lmbda 1.0 \
         --beta 1.0 \
-        --train_type full \
+        --tuner_type full \
         --freeze_vit true \
         --freeze_aligner true \
         --freeze_llm false \
