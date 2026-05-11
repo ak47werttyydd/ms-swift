@@ -612,6 +612,10 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
         with self.template.forward_context(self.model, encoded_inputs):
             loss = HFSFTTrainer.training_step(self, model, encoded_inputs, num_items_in_batch)
+        if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+            import torch.distributed as dist
+            rank = dist.get_rank() if dist.is_initialized() else 0
+            print(f'[DEBUG training_step] rank={rank} loss shape={loss.shape} dim={loss.dim()}')
         return loss
 
     def _fetch_teacher_logprobs_from_api(self, encoded_inputs: Dict[str, torch.Tensor]):
@@ -767,7 +771,8 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
         teacher_logits.div_(temperature)
 
         if num_valid == 0:
-            return student_logits.new_zeros(())
+            # return student_logits.new_zeros(()) # this will raise bugs in deepspeed.maybe_loss_for_backward
+            return student_logits.sum() * 0
 
         num_valid_int = num_valid if isinstance(num_valid, int) else num_valid.item()
         total_loss = student_logits.new_zeros(())
