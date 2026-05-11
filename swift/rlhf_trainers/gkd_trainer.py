@@ -800,7 +800,7 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             total_loss = total_loss + jsd_chunk.sum()
             del jsd_chunk, s_log_probs, t_log_probs
 
-        return total_loss / num_valid
+        return total_loss / num_valid_int
 
     def _prepare_logging(self):
         """Initialize logging components for on-policy rollout tracking."""
