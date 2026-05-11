@@ -797,8 +797,11 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
                 jsd_chunk = beta_t * kl_teacher + (1 - beta_t) * kl_student
                 del kl_teacher, kl_student
 
-            total_loss = total_loss + jsd_chunk.sum()
-            del jsd_chunk, s_log_probs, t_log_probs
+            chunk_sum = jsd_chunk.sum()
+            if start_idx == 0 and os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG] jsd_chunk.sum() shape={chunk_sum.shape} dim={chunk_sum.dim()} value={chunk_sum}')
+            total_loss = total_loss + chunk_sum
+            del jsd_chunk, s_log_probs, t_log_probs, chunk_sum
 
         return total_loss / num_valid_int
 

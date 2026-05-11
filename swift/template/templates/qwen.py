@@ -455,6 +455,10 @@ class Qwen2VLTemplate(Template):
         input_ids = inputs['input_ids']
         if 'mm_token_type_ids' in inspect.signature(get_rope_index).parameters:
             kwargs['mm_token_type_ids'] = self.create_mm_token_type_ids(input_ids)
+            import os
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                mm = kwargs['mm_token_type_ids']
+                print(f'[DEBUG] mm_token_type_ids unique={mm.unique().tolist()} shape={list(mm.shape)}', flush=True)
         elif not self.is_training:
             # Compatible with older versions of transformers
             return {}
