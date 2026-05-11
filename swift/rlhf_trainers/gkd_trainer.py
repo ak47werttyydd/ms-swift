@@ -388,6 +388,8 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             loss = self._compute_jsd_loss(outputs_student.logits, teacher_out, inputs['labels'])
 
             if self.args.sft_alpha > 0 and data_source != DataSource.STUDENT:
+                if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                    print(f'[DEBUG L391] outputs_student.loss shape={outputs_student.loss.shape} dim={outputs_student.loss.dim()}')
                 loss = loss + self.args.sft_alpha * outputs_student.loss
         # Self-distillation mode: student model doubles as teacher
         elif self._is_self_distillation:
@@ -412,6 +414,8 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             loss = self._compute_jsd_loss(outputs_student.logits, teacher_out, inputs['labels'])
 
             if self.args.sft_alpha > 0 and data_source != DataSource.STUDENT:
+                if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                    print(f'[DEBUG L414] outputs_student.loss shape={outputs_student.loss.shape} dim={outputs_student.loss.dim()}')
                 loss = loss + self.args.sft_alpha * outputs_student.loss
         # Separate teacher model provided
         else:
@@ -435,6 +439,8 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             loss = self._compute_jsd_loss(outputs_student.logits, teacher_out, inputs['labels'])
 
             if self.args.sft_alpha > 0 and data_source != DataSource.STUDENT:
+                if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                    print(f'[DEBUG L437] outputs_student.loss shape={outputs_student.loss.shape} dim={outputs_student.loss.dim()}')
                 loss = loss + self.args.sft_alpha * outputs_student.loss
 
         # Return loss
@@ -803,7 +809,10 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             total_loss = total_loss + chunk_sum
             del jsd_chunk, s_log_probs, t_log_probs, chunk_sum
 
-        return total_loss / num_valid_int
+        result = total_loss / num_valid_int
+        if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+            print(f'[DEBUG] generalized_jsd_loss return: shape={result.shape} dim={result.dim()} value={result}')
+        return result
 
     def _prepare_logging(self):
         """Initialize logging components for on-policy rollout tracking."""
