@@ -37,9 +37,9 @@ NNAL_SETENV="${NNAL_SETENV:-/home/canada_group_account/a84400789/CANN8.5.1/nnal/
 VLLM_ASCEND_DIR="${VLLM_ASCEND_DIR:-/home/canada_group_account/a84400789/vllm-ascend}"
 MS_SWIFT_DIR="${MS_SWIFT_DIR:-/home/canada_group_account/a84400789/ms-swift}"
 VLLM_DIR="${VLLM_DIR:-/home/canada_group_account/a84400789/vllm}"
-VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/vllm-project/vllm-ascend}"
+VLLM_ASCEND_URL="${VLLM_ASCEND_URL:-https://github.com/ak47werttyydd/vllm-ascend}"
 
-VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-releases/v0.18.0}"
+VLLM_ASCEND_BRANCH="${VLLM_ASCEND_BRANCH:-v0.18.0_ms_swift}"
 VLLM_TAG="${VLLM_TAG:-v0.18.0}"   # matches vllm-ascend releases/v0.18.0 CI
 
 # SOC_VERSION: required at runtime and by vllm-ascend source install.
@@ -120,7 +120,7 @@ if [[ ! -d "$VLLM_ASCEND_DIR/.git" ]]; then
 fi
 (
     cd "$VLLM_ASCEND_DIR"
-    _vllm_ascend_ver="${VLLM_ASCEND_BRANCH##*v}"
+    _vllm_ascend_ver="0.18.0"  # fork v0.18.0_ms_swift still reports 0.18.0 in pip metadata
     if pip show vllm-ascend 2>/dev/null | grep -q "^Version: ${_vllm_ascend_ver}"; then
         log "vllm-ascend ${_vllm_ascend_ver} already installed — skipping"
     else
@@ -160,6 +160,10 @@ pip install "torch==2.9.0" \
 # Pin to 68.x so import succeeds. Run last so nothing upgrades it back.
 log "Pinning setuptools==68.0 to keep pkg_resources available"
 pip install "setuptools==68.0"
+
+# Upgrade transformers to 5.3.0 for the latest Qwen3.5 GKD features (e.g. new attention cache format).
+pip install -U "transformers==5.3.0"
+pip install "qwen_vl_utils>=0.0.14"
 
 # --- Verification ---
 log "Verifying NPU + vllm + ms-swift install"

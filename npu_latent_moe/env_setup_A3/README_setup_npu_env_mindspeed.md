@@ -97,7 +97,8 @@ bash scripts/setup_npu_env_mindspeed.sh
 | `MINDSPEED_REPO` | `~/Code/MindSpeed` | MindSpeed 本地仓库路径 |
 | `MINDSPEED_BRANCH` | `core_r0.15.3` | MindSpeed 分支 |
 | `MCORE_BRIDGE_REPO` | `~/Code/mcore-bridge` | mcore-bridge 本地仓库路径 |
-| `VLLM_ASCEND_BRANCH` | `releases/v0.18.0` | vllm-ascend 分支 |
+| `VLLM_ASCEND_URL` | `https://github.com/ak47werttyydd/vllm-ascend` | vllm-ascend fork（含 mem_get_info 等 ms-swift 补丁） |
+| `VLLM_ASCEND_BRANCH` | `v0.18.0_ms_swift` | vllm-ascend 分支（基于 releases/v0.18.0） |
 | `VLLM_TAG` | `v0.18.0` | vllm tag |
 | `USE_CN_MIRROR` | `0` | 设为 `1` 切换 pip 到阿里云镜像 |
 

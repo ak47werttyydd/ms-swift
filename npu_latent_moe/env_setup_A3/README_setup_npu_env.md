@@ -73,7 +73,8 @@ bash scripts/setup_npu_env.sh
 | `VLLM_ASCEND_DIR` | `~/Code/vllm-ascend` | vllm-ascend 本地仓库路径 |
 | `MS_SWIFT_DIR` | `~/Code/ms-swift` | ms-swift 本地仓库路径 |
 | `VLLM_DIR` | `~/Code/vllm` | vllm 本地仓库路径 |
-| `VLLM_ASCEND_BRANCH` | `releases/v0.18.0` | vllm-ascend 分支 |
+| `VLLM_ASCEND_URL` | `https://github.com/ak47werttyydd/vllm-ascend` | vllm-ascend fork（含 mem_get_info 等 ms-swift 补丁） |
+| `VLLM_ASCEND_BRANCH` | `v0.18.0_ms_swift` | vllm-ascend 分支（基于 releases/v0.18.0） |
 | `VLLM_TAG` | `v0.18.0` | vllm tag |
 | `USE_CN_MIRROR` | `0` | 设为 `1` 切换 pip 到阿里云镜像 |
 
