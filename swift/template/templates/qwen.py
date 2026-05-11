@@ -566,6 +566,19 @@ class Qwen3_5Template(Qwen3VLTemplate):
     image_token_id = 248056
     video_token_id = 248057
 
+    def create_mm_token_type_ids(self, input_ids):
+        # Qwen3.5 get_rope_index only supports modality keys 0/1/2 (text/image/video).
+        # Passing audio (key=3) causes KeyError inside get_rope_index.
+        processor = self.processor
+        image_token_id = getattr(processor, 'image_token_id', None)
+        video_token_id = getattr(processor, 'video_token_id', None)
+        mm_token_type_ids = torch.zeros_like(input_ids)
+        if image_token_id is not None:
+            mm_token_type_ids[input_ids == image_token_id] = 1
+        if video_token_id is not None:
+            mm_token_type_ids[input_ids == video_token_id] = 2
+        return mm_token_type_ids
+
     def _post_encode(self, model, inputs: Dict[str, Any]) -> Dict[str, Any]:
         return Qwen2VLTemplate._post_encode(self, model, inputs)
 
