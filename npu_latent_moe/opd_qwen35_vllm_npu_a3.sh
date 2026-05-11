@@ -72,6 +72,7 @@ start_teacher() {
     echo "    max_model_len=${TEACHER_MAX_MODEL_LEN} (≥ ${MAX_LENGTH}+${MAX_COMPLETION_LENGTH}+1)"
     ASCEND_RT_VISIBLE_DEVICES=${TEACHER_NPUS} \
     VLLM_ATTENTION_BACKEND=ASCEND \
+    VLLM_ASCEND_ENABLE_NZ=0 \
     vllm serve "${TEACHER_MODEL}" \
         --port "${TEACHER_PORT}" \
         --tensor-parallel-size "${TEACHER_TP}" \
@@ -168,6 +169,7 @@ run_training \
     env NPROC_PER_NODE=${STUDENT_NPROC} \
     ASCEND_RT_VISIBLE_DEVICES=${STUDENT_NPUS} \
     VLLM_ATTENTION_BACKEND=ASCEND \
+    VLLM_ASCEND_ENABLE_NZ=0 \
     swift rlhf \
         --rlhf_type gkd \
         --model_type qwen3_5 \
