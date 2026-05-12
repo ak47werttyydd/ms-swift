@@ -688,6 +688,16 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
 
         gather_if_zero3 = get_gather_if_zero3_context(self)
 
+        # Workaround: torch-npu + DeepSpeed ZeRO-3 occasionally leaves persistent
+        # params with stale `ds_active_sub_modules` from init-time forward hooks
+        # that never had a matching post-forward release. On GatheredParameters
+        # __exit__, partition() then hits `free_param` and raises
+        # "Cannot free a ZeRO-3 parameter while it is still active in submodules".
+        # Persistent params are always-gathered so clearing this set is safe here.
+        for p in self.model.parameters():
+            if getattr(p, 'ds_persist', False) and hasattr(p, 'ds_active_sub_modules'):
+                p.ds_active_sub_modules.clear()
+
         for i, parameter_group in enumerate(self.parameter_groups):
             parameter_group_no_lora = self.parameter_groups_no_lora[i]
 
