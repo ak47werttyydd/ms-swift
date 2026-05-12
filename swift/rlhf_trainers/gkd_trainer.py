@@ -848,10 +848,20 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             chunk_sum = jsd_chunk.sum()
             if start_idx == 0 and os.environ.get('DEBUG_ADRIAN', '0') == '1':
                 s_chunk_dbg = student_logits[start_idx:end_idx]
+                # Probe both directions of F.kl_div + manual rewrite on the same tensors
+                probe_swap = F.kl_div(s_log_probs, t_log_probs, reduction='none', log_target=True)
+                probe_same = F.kl_div(t_log_probs, s_log_probs, reduction='none', log_target=True)
+                probe_manual = s_log_probs.exp() * (s_log_probs - t_log_probs)
                 print(f'[DEBUG loop @0] s_chunk.grad_fn={s_chunk_dbg.grad_fn} '
                       f's_log_probs.grad_fn={s_log_probs.grad_fn} '
+                      f't_log_probs.grad_fn={t_log_probs.grad_fn} '
                       f'jsd_chunk.grad_fn={jsd_chunk.grad_fn} '
                       f'chunk_sum.grad_fn={chunk_sum.grad_fn} beta={beta}')
+                print(f'[DEBUG kl_div probes] '
+                      f'kl_div(s,t).grad_fn={probe_swap.grad_fn} '
+                      f'kl_div(t,s).grad_fn={probe_same.grad_fn} '
+                      f'manual(exp(s)*(s-t)).grad_fn={probe_manual.grad_fn}')
+                del probe_swap, probe_same, probe_manual
             total_loss = total_loss + chunk_sum
             if start_idx == 0 and os.environ.get('DEBUG_ADRIAN', '0') == '1':
                 print(f'[DEBUG loop @0 post-add] total_loss.grad_fn={total_loss.grad_fn}')
