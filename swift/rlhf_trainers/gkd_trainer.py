@@ -769,8 +769,14 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
         # Top-k mode: gather/topk first to get small [*, k] tensors, then scale in-place
         if teacher_topk_logprobs is not None and teacher_topk_indices is not None:
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG jsd A pre-gather] student_logits.grad_fn={student_logits.grad_fn}')
             student_logits = torch.gather(student_logits, dim=-1, index=teacher_topk_indices)
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG jsd B post-gather] student_logits.grad_fn={student_logits.grad_fn}')
             student_logits.div_(temperature)
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG jsd C post-div_] student_logits.grad_fn={student_logits.grad_fn}')
             teacher_logits = teacher_topk_logprobs / temperature
             temperature = 1.0
         elif topk is not None and teacher_logits is not None:
@@ -785,6 +791,9 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             student_logits = student_logits[mask]
             teacher_logits = teacher_logits[mask]
             num_valid = mask.sum()
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG jsd D post-mask] student_logits.grad_fn={student_logits.grad_fn} '
+                      f'num_valid={num_valid}')
         else:
             student_logits = student_logits.view(-1, student_logits.size(-1))
             teacher_logits = teacher_logits.view(-1, teacher_logits.size(-1))
@@ -844,7 +853,9 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
         result = total_loss / num_valid_int
         if os.environ.get('DEBUG_ADRIAN', '0') == '1':
-            print(f'[DEBUG] generalized_jsd_loss return: shape={result.shape} dim={result.dim()} value={result}')
+            print(f'[DEBUG jsd E return] shape={result.shape} dim={result.dim()} value={result} '
+                  f'grad_fn={result.grad_fn} requires_grad={result.requires_grad} '
+                  f'total_loss.grad_fn={total_loss.grad_fn}')
         return result
 
     def _prepare_logging(self):
