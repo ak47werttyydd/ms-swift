@@ -454,10 +454,21 @@ class Qwen2VLTemplate(Template):
             attention_mask = inputs.get('attention_mask')
         input_ids = inputs['input_ids']
         if 'mm_token_type_ids' in inspect.signature(get_rope_index).parameters:
-            kwargs['mm_token_type_ids'] = self.create_mm_token_type_ids(input_ids)
+            mm = self.create_mm_token_type_ids(input_ids)
+            # Random-init / undertrained students can emit the special image/video/audio
+            # token ids in their completion stream even though the batch carries no real
+            # multimodal grids. get_rope_index then tries to pull a grid_thw via
+            # `next(grid_iters[modality])` but the iterator is None → TypeError.
+            # Zero out any modality marks that have no backing grid in this batch.
+            if inputs.get('image_grid_thw') is None:
+                mm[mm == 1] = 0
+            if inputs.get('video_grid_thw') is None:
+                mm[mm == 2] = 0
+            if inputs.get('audio_feature_lengths') is None and inputs.get('audio_grid_thw') is None:
+                mm[mm == 3] = 0
+            kwargs['mm_token_type_ids'] = mm
             import os
             if os.environ.get('DEBUG_ADRIAN', '0') == '1':
-                mm = kwargs['mm_token_type_ids']
                 print(f'[DEBUG] mm_token_type_ids unique={mm.unique().tolist()} shape={list(mm.shape)}', flush=True)
         elif not self.is_training:
             # Compatible with older versions of transformers
