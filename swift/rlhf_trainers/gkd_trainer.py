@@ -443,6 +443,11 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
                     print(f'[DEBUG L437] outputs_student.loss shape={outputs_student.loss.shape} dim={outputs_student.loss.dim()}')
                 loss = loss + self.args.sft_alpha * outputs_student.loss
 
+        if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+            print(f'[DEBUG compute_loss return] loss.shape={loss.shape} loss.grad_fn={loss.grad_fn} '
+                  f'loss.requires_grad={loss.requires_grad} data_source={data_source} '
+                  f'use_liger={self.use_liger_gkd_loss} use_api={self.use_teacher_api} '
+                  f'self_distill={self._is_self_distillation}')
         # Return loss
         if return_outputs:
             return (loss, outputs_student)
@@ -772,7 +777,13 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
         if num_valid == 0:
             # return student_logits.new_zeros(()) # this will raise bugs in deepspeed.maybe_loss_for_backward
-            return student_logits.sum() * 0
+            zero_loss = student_logits.sum() * 0
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG num_valid==0] student_logits.shape={student_logits.shape} '
+                      f'student_logits.grad_fn={student_logits.grad_fn} '
+                      f'zero_loss.grad_fn={zero_loss.grad_fn} '
+                      f'zero_loss.requires_grad={zero_loss.requires_grad}')
+            return zero_loss
 
         num_valid_int = num_valid if isinstance(num_valid, int) else num_valid.item()
         total_loss = student_logits.new_zeros(())
