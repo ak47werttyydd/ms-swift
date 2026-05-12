@@ -831,16 +831,23 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             del s_chunk, t_chunk
 
             if beta == 0:
+                # KL(teacher || student) — student is in input position, NPU-safe
                 jsd_chunk = F.kl_div(s_log_probs, t_log_probs, reduction='none', log_target=True)
             elif beta == 1:
-                jsd_chunk = F.kl_div(t_log_probs, s_log_probs, reduction='none', log_target=True)
+                # KL(student || teacher) = exp(s) * (s - t).
+                # Avoid F.kl_div with student in target position — torch-npu lacks
+                # target-side backward for kl_div (verified via grad_fn probe).
+                jsd_chunk = s_log_probs.exp() * (s_log_probs - t_log_probs)
             else:
                 mixture_log_probs = torch.logsumexp(
                     torch.stack([s_log_probs + log_1_minus_beta, t_log_probs + log_beta]),
                     dim=0,
                 )
+                # kl_teacher: teacher is target (no grad needed). NPU-safe.
                 kl_teacher = F.kl_div(mixture_log_probs, t_log_probs, reduction='none', log_target=True)
-                kl_student = F.kl_div(mixture_log_probs, s_log_probs, reduction='none', log_target=True)
+                # kl_student would put student in target position → NPU breaks grad.
+                # Manual: KL(student || mixture) = exp(s) * (s - mixture)
+                kl_student = s_log_probs.exp() * (s_log_probs - mixture_log_probs)
                 del mixture_log_probs
                 jsd_chunk = beta_t * kl_teacher + (1 - beta_t) * kl_student
                 del kl_teacher, kl_student
