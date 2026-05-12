@@ -364,6 +364,23 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
             if self.args.sft_alpha > 0:
                 model_inputs['labels'] = inputs['labels']
             outputs_student = model(**model_inputs)
+            if os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                logits = outputs_student.logits
+                is_grad_enabled = torch.is_grad_enabled()
+                model_training = model.training
+                lm_head_rg = None
+                try:
+                    unwrapped = self.accelerator.unwrap_model(model)
+                    lm_head = unwrapped.get_output_embeddings()
+                    if lm_head is not None and lm_head.weight is not None:
+                        lm_head_rg = lm_head.weight.requires_grad
+                except Exception as e:
+                    lm_head_rg = f'err:{e}'
+                print(f'[DEBUG student_fwd] logits.requires_grad={logits.requires_grad} '
+                      f'logits.grad_fn={logits.grad_fn} '
+                      f'torch.is_grad_enabled()={is_grad_enabled} '
+                      f'model.training={model_training} '
+                      f'lm_head.weight.requires_grad={lm_head_rg}')
 
             # teacher_api shape: [batch, seq_len-1, topk]
             # Pad to [batch, seq_len, topk] so it aligns with student logits.
