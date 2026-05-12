@@ -847,8 +847,14 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
             chunk_sum = jsd_chunk.sum()
             if start_idx == 0 and os.environ.get('DEBUG_ADRIAN', '0') == '1':
-                print(f'[DEBUG] jsd_chunk.sum() shape={chunk_sum.shape} dim={chunk_sum.dim()} value={chunk_sum}')
+                s_chunk_dbg = student_logits[start_idx:end_idx]
+                print(f'[DEBUG loop @0] s_chunk.grad_fn={s_chunk_dbg.grad_fn} '
+                      f's_log_probs.grad_fn={s_log_probs.grad_fn} '
+                      f'jsd_chunk.grad_fn={jsd_chunk.grad_fn} '
+                      f'chunk_sum.grad_fn={chunk_sum.grad_fn} beta={beta}')
             total_loss = total_loss + chunk_sum
+            if start_idx == 0 and os.environ.get('DEBUG_ADRIAN', '0') == '1':
+                print(f'[DEBUG loop @0 post-add] total_loss.grad_fn={total_loss.grad_fn}')
             del jsd_chunk, s_log_probs, t_log_probs, chunk_sum
 
         result = total_loss / num_valid_int
