@@ -615,6 +615,35 @@ def profiling_decorator(func):
     return wrapper
 
 
+@contextmanager
+def phase_timer(tag: str, trainer=None):
+    """Lightweight per-phase wall-time probe, gated by PROFILE_ADRIAN=1.
+
+    Synchronizes the accelerator device on exit so the measured wall-time
+    actually reflects kernel completion (NPU/CUDA launches are async).
+    Prints only on the main process to keep logs readable.
+    """
+    if os.environ.get('PROFILE_ADRIAN', '0') != '1':
+        yield
+        return
+    t0 = time.perf_counter()
+    try:
+        yield
+    finally:
+        try:
+            dev = get_torch_device()
+            if hasattr(dev, 'synchronize'):
+                dev.synchronize()
+        except Exception:
+            pass
+        is_main = True
+        if trainer is not None and hasattr(trainer, 'accelerator'):
+            is_main = getattr(trainer.accelerator, 'is_main_process', True)
+        if is_main:
+            rank = int(os.environ.get('RANK', '0'))
+            print(f'[T rank={rank}] {tag} {time.perf_counter() - t0:.3f}s', flush=True)
+
+
 class _ForwardRedirection:
     """Implements the `forward-redirection`.
     Taken from Pytorch-lightning:

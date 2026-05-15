@@ -40,7 +40,8 @@ from .utils import (VLLM_LORA_INT_ID, VLLM_LORA_NAME, VLLM_LORA_PATH, FlattenedT
                     add_base_layer_suffix_by_param_names, aggressive_empty_cache, check_vllm_version_ge,
                     expand_vllm_param_name_aliases, get_even_process_data, get_gather_if_zero3_context,
                     patch_lora_merge, patch_lora_unmerge, patch_vllm_load_adapter, patch_vllm_moe_model_weight_loader,
-                    profiling_context, profiling_decorator, set_expandable_segments, vllm_supports_lora_load_inplace)
+                    phase_timer, profiling_context, profiling_decorator, set_expandable_segments,
+                    vllm_supports_lora_load_inplace)
 
 DataType = List[Dict[str, Union[torch.Tensor, Any]]]
 logger = get_logger()
@@ -711,14 +712,16 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
             else:
                 parameters = []
 
-            with gather_if_zero3(parameters):
+            with phase_timer(f'  move_full.group[{i}/{len(self.parameter_groups)}]', self), gather_if_zero3(parameters):
                 if should_merge:
                     with patch_lora_merge(self.model, parameter_group):
                         self.model.merge_adapter()
 
                 try:
-                    state_dict = self._collect_state_dict_for_vllm(parameter_group, parameter_group_no_lora)
-                    self._load_state_dict_to_vllm(state_dict)
+                    with phase_timer(f'    collect_state_dict[{i}]', self):
+                        state_dict = self._collect_state_dict_for_vllm(parameter_group, parameter_group_no_lora)
+                    with phase_timer(f'    load_state_dict_to_vllm[{i}]', self):
+                        self._load_state_dict_to_vllm(state_dict)
                 finally:
                     if should_merge:
                         with patch_lora_unmerge(self.model):
@@ -960,11 +963,13 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
             if self.engine.inner_model_executor.is_sleeping:
                 wake_up_params = inspect.signature(self.engine.engine.wake_up).parameters
                 kwargs = {'tags': ['weights']} if 'tags' in wake_up_params else {}
-                aggressive_empty_cache()
-                self.engine.engine.wake_up(**kwargs)
+                with phase_timer('vllm.wake_up(weights)+empty_cache', self):
+                    aggressive_empty_cache()
+                    self.engine.engine.wake_up(**kwargs)
 
         if self.state.global_step != self._last_loaded_step or args.sleep_level == 2:
-            self._move_model_to_vllm()
+            with phase_timer('move_model_to_vllm', self):
+                self._move_model_to_vllm()
             self._last_loaded_step = self.state.global_step
 
         context = self.offload_context if self.enable_offload else nullcontext
@@ -972,33 +977,36 @@ class RolloutTrainerMixin(RLHFTrainerMixin):
 
             if (self.vllm_mode == 'colocate' and self.engine.inner_model_executor.is_sleeping
                     and 'tags' in inspect.signature(self.engine.engine.wake_up).parameters):
-                aggressive_empty_cache()
-                set_expandable_segments(False)
-                self.engine.engine.wake_up(tags=['kv_cache'])
+                with phase_timer('vllm.wake_up(kv_cache)+empty_cache', self):
+                    aggressive_empty_cache()
+                    set_expandable_segments(False)
+                    self.engine.engine.wake_up(tags=['kv_cache'])
 
-            if hasattr(self, 'async_generate') and self.async_generate:
-                all_inputs = gather_object(inputs)
-                self.async_generate_rollout(all_inputs)
+            with phase_timer('rollout.generate', self):
+                if hasattr(self, 'async_generate') and self.async_generate:
+                    all_inputs = gather_object(inputs)
+                    self.async_generate_rollout(all_inputs)
 
-                data_cache = self._queue.get()
-                all_outputs = gather_object(data_cache.results)
+                    data_cache = self._queue.get()
+                    all_outputs = gather_object(data_cache.results)
 
-                per_device_datasize = len(all_outputs) // self.accelerator.num_processes
-                process_slice = slice(
-                    self.accelerator.process_index * per_device_datasize,
-                    (self.accelerator.process_index + 1) * per_device_datasize,
-                )
-                outputs = all_outputs[process_slice]
+                    per_device_datasize = len(all_outputs) // self.accelerator.num_processes
+                    process_slice = slice(
+                        self.accelerator.process_index * per_device_datasize,
+                        (self.accelerator.process_index + 1) * per_device_datasize,
+                    )
+                    outputs = all_outputs[process_slice]
 
-            else:
-                with self.multi_turn_completion_length_context():
-                    outputs = self._infer_single_or_multi_turn(inputs, self.request_config)
+                else:
+                    with self.multi_turn_completion_length_context():
+                        outputs = self._infer_single_or_multi_turn(inputs, self.request_config)
 
             if self.vllm_mode == 'colocate' and args.sleep_level > 0:
-                self.engine.engine.reset_prefix_cache()
-                self.engine.engine.sleep(level=args.sleep_level)
-                aggressive_empty_cache()
-                set_expandable_segments(True)
+                with phase_timer('vllm.sleep+empty_cache', self):
+                    self.engine.engine.reset_prefix_cache()
+                    self.engine.engine.sleep(level=args.sleep_level)
+                    aggressive_empty_cache()
+                    set_expandable_segments(True)
         return outputs
 
     def _preprocess_inputs(self, inputs: DataType) -> DataType:

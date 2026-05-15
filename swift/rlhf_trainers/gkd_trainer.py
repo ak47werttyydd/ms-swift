@@ -22,8 +22,8 @@ from swift.trainers import SwiftMixin, disable_gradient_checkpointing
 from swift.utils import (JsonlWriter, get_logger, is_swanlab_available, is_wandb_available, remove_response, to_device,
                          unwrap_model_for_generation)
 from .rollout_mixin import DataType, RolloutTrainerMixin
-from .utils import (get_gather_if_zero3_context, identity_data_collator, prepare_deepspeed, profiling_context,
-                    profiling_decorator)
+from .utils import (get_gather_if_zero3_context, identity_data_collator, phase_timer, prepare_deepspeed,
+                    profiling_context, profiling_decorator)
 
 try:
     from liger_kernel.chunked_loss import LigerFusedLinearJSDLoss
@@ -278,6 +278,10 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
     @profiling_decorator
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        with phase_timer('  compute_loss(student_fwd+jsd)', self):
+            return self._compute_loss_impl(model, inputs, return_outputs, num_items_in_batch)
+
+    def _compute_loss_impl(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         # Get data source: DataSource.STUDENT, DataSource.TEACHER, or DataSource.DATASET
         data_source = inputs.pop('_data_source', DataSource.DATASET)
         # Get teacher logprobs from API if available (set in training_step)
@@ -533,7 +537,8 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
                     inputs = self.resample_encode_failed_inputs(inputs)
                 if args.use_vllm:
                     processed_inputs = self._preprocess_inputs(inputs)
-                    generated_inputs = self._fast_infer(processed_inputs)
+                    with phase_timer('TRAIN_STEP/rollout(_fast_infer)', self):
+                        generated_inputs = self._fast_infer(processed_inputs)
                     if self.log_completions:
                         messages = [inp['messages'][:-1] for inp in generated_inputs]
                         completions = [deepcopy(inp['messages'][-1]['content']) for inp in generated_inputs]
@@ -628,11 +633,13 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
             # Fetch teacher logprobs from API if using external teacher service
             if self.use_teacher_api:
-                teacher_logprobs, teacher_indices = self._fetch_teacher_logprobs_from_api(encoded_inputs)
-                encoded_inputs['_teacher_api_logprobs'] = teacher_logprobs
-                encoded_inputs['_teacher_api_indices'] = teacher_indices
+                with phase_timer('TRAIN_STEP/teacher_api', self):
+                    teacher_logprobs, teacher_indices = self._fetch_teacher_logprobs_from_api(encoded_inputs)
+                    encoded_inputs['_teacher_api_logprobs'] = teacher_logprobs
+                    encoded_inputs['_teacher_api_indices'] = teacher_indices
 
-        with self.template.forward_context(self.model, encoded_inputs):
+        with self.template.forward_context(self.model, encoded_inputs), \
+                phase_timer('TRAIN_STEP/forward+backward+optim', self):
             loss = HFSFTTrainer.training_step(self, model, encoded_inputs, num_items_in_batch)
         if os.environ.get('DEBUG_ADRIAN', '0') == '1':
             import torch.distributed as dist
