@@ -22,8 +22,8 @@ from swift.trainers import SwiftMixin, disable_gradient_checkpointing
 from swift.utils import (JsonlWriter, get_logger, is_swanlab_available, is_wandb_available, remove_response, to_device,
                          unwrap_model_for_generation)
 from .rollout_mixin import DataType, RolloutTrainerMixin
-from .utils import (get_gather_if_zero3_context, identity_data_collator, phase_timer, prepare_deepspeed,
-                    profiling_context, profiling_decorator)
+from .utils import (get_gather_if_zero3_context, identity_data_collator, install_layer_record_function_hooks,
+                    phase_timer, prepare_deepspeed, profiling_context, profiling_decorator)
 
 try:
     from liger_kernel.chunked_loss import LigerFusedLinearJSDLoss
@@ -78,6 +78,7 @@ teacher_model_server_model_name = None
 class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
 
     def __init__(self, model: Optional[Union[PreTrainedModel, nn.Module, str]] = None, *_args, **kwargs):
+        install_layer_record_function_hooks()
         teacher_model = kwargs.pop('teacher_model', None)
         teacher_deepspeed_config = kwargs.pop('teacher_deepspeed_config', None)
         self.vllm_client = kwargs.pop('vllm_client', None)

@@ -615,6 +615,52 @@ def profiling_decorator(func):
     return wrapper
 
 
+_LAYER_RECORD_FUNCTION_INSTALLED = False
+
+
+def install_layer_record_function_hooks():
+    """Monkey-patch Qwen3Next GDN / Attention layer forwards with torch.profiler.record_function.
+
+    Gated by the same PROFILE_ADRIAN=1 env var as phase_timer. Idempotent — safe to
+    call multiple times. Silently no-ops if transformers / Qwen3Next is unavailable.
+
+    Once installed, torch.profiler chrome traces (and msprof Step-Trace) will show
+    per-layer blocks named `GDN_L{idx}` and `ATTN_L{idx}`.
+    """
+    global _LAYER_RECORD_FUNCTION_INSTALLED
+    if os.environ.get('PROFILE_ADRIAN', '0') != '1':
+        return
+    if _LAYER_RECORD_FUNCTION_INSTALLED:
+        return
+    try:
+        from torch.profiler import record_function
+        from transformers.models.qwen3_next import modeling_qwen3_next as M
+    except Exception as e:
+        if int(os.environ.get('RANK', '0')) == 0:
+            print(f'[T] install_layer_record_function_hooks skipped: {e}', flush=True)
+        return
+
+    def _wrap(cls, tag):
+        if cls is None or getattr(cls.forward, '_record_function_wrapped', False):
+            return
+        orig = cls.forward
+
+        @functools.wraps(orig)
+        def fwd(self, *args, **kwargs):
+            with record_function(f"{tag}_L{getattr(self, 'layer_idx', '?')}"):
+                return orig(self, *args, **kwargs)
+
+        fwd._record_function_wrapped = True
+        cls.forward = fwd
+
+    _wrap(getattr(M, 'Qwen3NextGatedDeltaNet', None), 'GDN')
+    _wrap(getattr(M, 'Qwen3NextAttention', None), 'ATTN')
+    _LAYER_RECORD_FUNCTION_INSTALLED = True
+    if int(os.environ.get('RANK', '0')) == 0:
+        print('[T] layer record_function hooks installed on Qwen3NextGatedDeltaNet / Qwen3NextAttention',
+              flush=True)
+
+
 @contextmanager
 def phase_timer(tag: str, trainer=None):
     """Lightweight per-phase wall-time probe, gated by PROFILE_ADRIAN=1.
