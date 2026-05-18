@@ -5,7 +5,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 
-CKPT = "output/gkd_rezaul_latentmoe_24l/v1-20260418-125431/checkpoint-900"
+CKPT = "output/gkd_rezaul_latentmoe_24l_realaux_freeze400_thawInf/phase1_freeze/v0-20260428-194205/checkpoint-200"
 
 print("Loading model (trust_remote_code=True) ...")
 model = AutoModelForCausalLM.from_pretrained(
