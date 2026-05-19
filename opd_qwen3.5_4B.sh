@@ -2,9 +2,9 @@
 set -euo pipefail
 
 TEACHER_MODEL="${TEACHER_MODEL:-/home/a84400789/local_models/Qwen3.5-35B-A3B}"
-STUDENT_MODEL="${STUDENT_MODEL:-/home/a84400789/ms-swift/qwen35_latentmoe/rezaul_latentmoe_24layers_original_ckpt}"
+STUDENT_MODEL="${STUDENT_MODEL:-/home/a84400789/local_models/Qwen3.5-4B}"
 
-PHASE1_OUTPUT="${PHASE1_OUTPUT:-/home/a84400789/ms-swift/output/opd_rezaul_latentmoe_24l}"
+PHASE1_OUTPUT="${PHASE1_OUTPUT:-/home/a84400789/ms-swift/output/opd_qwen3.5_4B}"
 
 # ── Plugin path (sibling of STUDENT_MODEL's ckpt dir) ───────────────────────
 GKD_PLUGIN="$(dirname "${STUDENT_MODEL}")/gkd_plugin.py"
@@ -25,22 +25,7 @@ MAX_COMPLETION_LENGTH="${MAX_COMPLETION_LENGTH:-1024}"
 STUDENT_VLLM_MAX_MODEL_LEN=$((MAX_LENGTH + MAX_COMPLETION_LENGTH))
 
 # ── Dataset ──────────────────────────────────────────────────────────────────
-# Presample JSONL files with "response" field (teacher-generated completions)
-# Override by setting PRESAMPLE_DATA as a space-separated string of paths.
-if [[ -z "${PRESAMPLE_DATA:-}" ]]; then
-    PRESAMPLE_DATA_ARGS=(
-        # Add your presample data paths here, e.g.:
-        "/home/a84400789/ms-swift/output/teacher_presample_shard0.jsonl"
-        "/home/a84400789/ms-swift/output/teacher_presample_shard1.jsonl"
-        "/home/a84400789/ms-swift/output/teacher_presample_shard2.jsonl"
-        "/home/a84400789/ms-swift/output/teacher_presample_shard3.jsonl"
-        "/home/a84400789/ms-swift/output/teacher_presample_shard4.jsonl"
-        "/home/a84400789/ms-swift/output/teacher_presample_shard0_run3.jsonl"
-        "/home/a84400789/ms-swift/output/presample_test.jsonl"
-    )
-else
-    read -ra PRESAMPLE_DATA_ARGS <<< "${PRESAMPLE_DATA}"
-fi
+mapfile -t DATASET < <(ls -1 /dev/shm/dataset/fineweb-edu-100BT/sample/100BT/*.parquet | sort)
 
 # ── Helper: start/stop teacher server ────────────────────────────────────────
 start_teacher() {
@@ -154,7 +139,7 @@ start_teacher
 # PHASE 1: On-Policy GKD (lmbda=1.0, student rollouts + teacher logprobs)
 # ═══════════════════════════════════════════════════════════════════════════════
 check_teacher
-echo "=== Phase 1: On-Policy GKD (lmbda=1.0) — 24-layer student ==="
+echo "=== Phase 1: On-Policy GKD (lmbda=1.0) — Qwen3.5-4B student ==="
 run_phase "${PHASE1_OUTPUT}" \
     env NPROC_PER_NODE=${STUDENT_NPROC} \
     CUDA_VISIBLE_DEVICES=${STUDENT_GPUS} \
@@ -162,10 +147,11 @@ run_phase "${PHASE1_OUTPUT}" \
     swift rlhf \
         --rlhf_type gkd \
         --model "${STUDENT_MODEL}" \
-        --model_type qwen3_5_latentmoe \
-        --external_plugins "${GKD_PLUGIN}" \
+        --model_type qwen3_5 \
         --teacher_model_server "http://localhost:${TEACHER_PORT}" \
-        --dataset "${PRESAMPLE_DATA_ARGS[@]}" \
+        --dataset "${DATASET[@]}" \
+        --streaming true \
+        --columns '{"text":"query"}' \
         --seq_kd false \
         --lmbda 1.0 \
         --beta 0.5 \
@@ -180,11 +166,11 @@ run_phase "${PHASE1_OUTPUT}" \
         --max_completion_length ${MAX_COMPLETION_LENGTH} \
         --truncation_strategy right \
         --warmup_ratio 0.05 \
-        --per_device_train_batch_size 4 \
-        --gradient_accumulation_steps 10 \
+        --per_device_train_batch_size 8 \
+        --gradient_accumulation_steps 5 \
         --learning_rate 1e-5 \
-        --num_train_epochs 1 \
-        --save_steps 100 \
+        --max_steps 10000 \
+        --save_steps 50 \
         --save_total_limit 10 \
         --save_only_model true \
         --deepspeed zero3 \
@@ -208,7 +194,7 @@ run_phase "${PHASE1_OUTPUT}" \
         --output_dir "${PHASE1_OUTPUT}"
 
 
-#--gradient_checkpointing true  #--gradient_checkpointing true 
+#--gradient_checkpointing true  # avoid OOM
 
 #--vllm_enforce_eager true \
 #--per_device_train_batch_size 6 \
