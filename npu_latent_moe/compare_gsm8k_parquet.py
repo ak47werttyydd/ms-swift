@@ -18,7 +18,7 @@ RAW = os.environ.get(
     "RAW_PARQUET",
     "/home/canada_group_account/a84400789/dataset/gsm8k/main/train-00000-of-00001.parquet",
 )
-VERL = os.environ.get("VERL_PARQUET", "./data/train.parquet")
+VERL = os.environ.get("VERL_PARQUET", "/home/s00525112/verl/data/train.parquet")
 
 
 def load_first(path: str) -> tuple[list[str], dict]:
