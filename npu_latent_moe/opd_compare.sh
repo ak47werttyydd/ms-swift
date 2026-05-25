@@ -88,6 +88,7 @@ start_teacher() {
         --gpu-memory-utilization "${TEACHER_NPU_MEM_UTIL}" \
         --max-logprobs "${TEACHER_MAX_LOGPROBS}" \
         --dtype bfloat16 \
+        --enforce-eager \
         --trust-remote-code \
         &
     TEACHER_PID=$!
