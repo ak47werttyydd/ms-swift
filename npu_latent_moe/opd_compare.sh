@@ -202,6 +202,7 @@ run_training \
         --per_device_train_batch_size ${MBS} \
         --gradient_accumulation_steps ${GRAD_ACC} \
         --learning_rate 1e-5 \
+        --max_grad_norm 1.0 \
         --max_steps ${MAX_STEPS} \
         --save_steps ${SAVE_STEPS} \
         --save_total_limit 5 \
@@ -214,6 +215,8 @@ run_training \
         --enable_thinking false \
         --logging_steps 1 \
         --load_from_cache_file true \
+        --train_dataloader_shuffle false \
+        --data_seed 42 \
         --use_vllm true \
         --vllm_mode colocate \
         --vllm_gpu_memory_utilization 0.65 \
