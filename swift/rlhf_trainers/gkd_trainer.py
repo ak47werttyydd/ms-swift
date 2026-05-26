@@ -540,6 +540,23 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
                     processed_inputs = self._preprocess_inputs(inputs)
                     with phase_timer('TRAIN_STEP/rollout(_fast_infer)', self):
                         generated_inputs = self._fast_infer(processed_inputs)
+                    if os.environ.get('ADRIAN_TRUNCATE', '0') == '1':
+                        local_flags = [bool(g.get('is_truncated', False)) for g in generated_inputs]
+                        local_reasons = [g.get('finish_reason', None) for g in generated_inputs]
+                        all_flags = gather_object(local_flags)
+                        all_reasons = gather_object(local_reasons)
+                        if self.accelerator.is_main_process:
+                            n = len(all_flags)
+                            n_trunc = sum(1 for x in all_flags if x)
+                            rate = (n_trunc / n) if n else 0.0
+                            from collections import Counter
+                            br = dict(Counter(all_reasons))
+                            rank = int(os.environ.get('RANK', '0'))
+                            print(
+                                f'[ADRIAN_TRUNCATE rank={rank} step={self.state.global_step}] '
+                                f'student_rollout_truncate_rate={rate:.4f} '
+                                f'({n_trunc}/{n}) finish_reason={br}',
+                                flush=True)
                     if self.log_completions:
                         messages = [inp['messages'][:-1] for inp in generated_inputs]
                         completions = [deepcopy(inp['messages'][-1]['content']) for inp in generated_inputs]
