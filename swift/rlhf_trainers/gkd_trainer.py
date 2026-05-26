@@ -557,6 +557,29 @@ class GKDTrainer(RolloutTrainerMixin, SwiftMixin, HFGKDTrainer):
                                 f'student_rollout_truncate_rate={rate:.4f} '
                                 f'({n_trunc}/{n}) finish_reason={br}',
                                 flush=True)
+                    _rollout_path = os.environ.get('ROLLOUT_ADRIAN')
+                    if _rollout_path:
+                        if not hasattr(self, '_adrian_rollout_writer'):
+                            self._adrian_rollout_writer = JsonlWriter(_rollout_path)
+                        _src_rank = int(os.environ.get('RANK', '0'))
+                        _step = int(self.state.global_step)
+                        _prompt_msgs = [deepcopy(inp['messages'][:-1]) for inp in generated_inputs]
+                        _rendered = self._apply_chat_template_to_messages_list(_prompt_msgs)
+                        _local_records = []
+                        for inp, prompt_text in zip(generated_inputs, _rendered):
+                            last_msg = inp['messages'][-1]
+                            resp_ids = inp.get('response_token_ids', None)
+                            resp_len = len(resp_ids) if isinstance(resp_ids, (list, tuple)) else None
+                            _local_records.append({
+                                'step': _step,
+                                'src_rank': _src_rank,
+                                'prompt': prompt_text,
+                                'response': last_msg.get('content', ''),
+                                'finish_reason': inp.get('finish_reason'),
+                                'is_truncated': bool(inp.get('is_truncated', False)),
+                                'response_len': resp_len,
+                            })
+                        self._adrian_rollout_writer.append(_local_records, gather_obj=True)
                     if self.log_completions:
                         messages = [inp['messages'][:-1] for inp in generated_inputs]
                         completions = [deepcopy(inp['messages'][-1]['content']) for inp in generated_inputs]
