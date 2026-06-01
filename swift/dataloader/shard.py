@@ -1,4 +1,5 @@
 # Copyright (c) ModelScope Contributors. All rights reserved.
+import os
 import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader
@@ -58,11 +59,12 @@ class BatchSamplerShard:
 
         batch = []
         first_yielded = False
+        _order_debug = os.environ.get('ADRIAN_ORDER_DEBUG', '0') == '1'
         # Last batch if not complete will be dropped.
         for idx in total_idx:
             batch.append(idx)
             if len(batch) == self.batch_size:
-                if not first_yielded and self.rank == 0:
+                if _order_debug and not first_yielded and self.rank == 0:
                     print(
                         f'[ORDER_DEBUG] BatchSamplerShard rank=0 first_batch_indices={batch} '
                         f'shuffle={self.shuffle} curr_seed={self.curr_seed} '

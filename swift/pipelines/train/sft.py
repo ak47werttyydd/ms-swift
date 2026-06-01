@@ -79,7 +79,8 @@ class SwiftSft(SwiftPipeline, TunerMixin):
         # The random shuffling of the training set occurs in the dataloader of the trainer.
         args = self.args
         dataset_kwargs = args.get_dataset_kwargs()
-        if is_master():
+        _order_debug = os.environ.get('ADRIAN_ORDER_DEBUG', '0') == '1'
+        if _order_debug and is_master():
             logger.info(
                 f'[ORDER_DEBUG] dataset_shuffle={args.dataset_shuffle!r} '
                 f'train_dataloader_shuffle={getattr(args, "train_dataloader_shuffle", None)!r} '
@@ -95,7 +96,7 @@ class SwiftSft(SwiftPipeline, TunerMixin):
                 split_dataset_ratio=args.split_dataset_ratio,
                 shuffle=args.dataset_shuffle,
                 **dataset_kwargs)
-        if is_master() and train_dataset is not None and hasattr(train_dataset, '__len__'):
+        if _order_debug and is_master() and train_dataset is not None and hasattr(train_dataset, '__len__'):
             try:
                 row0 = train_dataset[0]
                 row1 = train_dataset[1] if len(train_dataset) > 1 else {}
