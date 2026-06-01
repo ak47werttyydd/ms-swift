@@ -57,10 +57,18 @@ class BatchSamplerShard:
             total_idx = range(self.rank, self.total_samples * self.world_size, self.world_size)
 
         batch = []
+        first_yielded = False
         # Last batch if not complete will be dropped.
         for idx in total_idx:
             batch.append(idx)
             if len(batch) == self.batch_size:
+                if not first_yielded and self.rank == 0:
+                    print(
+                        f'[ORDER_DEBUG] BatchSamplerShard rank=0 first_batch_indices={batch} '
+                        f'shuffle={self.shuffle} curr_seed={self.curr_seed} '
+                        f'total_samples_per_rank={self.total_samples} world_size={self.world_size}',
+                        flush=True)
+                    first_yielded = True
                 yield batch
                 batch = []
         if not self.drop_last and len(batch) > 0:

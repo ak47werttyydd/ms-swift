@@ -79,6 +79,15 @@ class SwiftSft(SwiftPipeline, TunerMixin):
         # The random shuffling of the training set occurs in the dataloader of the trainer.
         args = self.args
         dataset_kwargs = args.get_dataset_kwargs()
+        if is_master():
+            logger.info(
+                f'[ORDER_DEBUG] dataset_shuffle={args.dataset_shuffle!r} '
+                f'train_dataloader_shuffle={getattr(args, "train_dataloader_shuffle", None)!r} '
+                f'data_seed={args.data_seed!r} '
+                f'split_dataset_ratio={args.split_dataset_ratio!r} '
+                f'load_from_cache_file={args.load_from_cache_file!r} '
+                f'dataset_num_proc={args.dataset_num_proc!r} '
+                f'columns={args.columns!r}')
         train_dataset, val_dataset = None, None
         if args.dataset:
             train_dataset, val_dataset = load_dataset(
@@ -86,6 +95,28 @@ class SwiftSft(SwiftPipeline, TunerMixin):
                 split_dataset_ratio=args.split_dataset_ratio,
                 shuffle=args.dataset_shuffle,
                 **dataset_kwargs)
+        if is_master() and train_dataset is not None and hasattr(train_dataset, '__len__'):
+            try:
+                row0 = train_dataset[0]
+                row1 = train_dataset[1] if len(train_dataset) > 1 else {}
+                row2 = train_dataset[2] if len(train_dataset) > 2 else {}
+
+                def _peek(row):
+                    if not isinstance(row, dict):
+                        return repr(row)[:120]
+                    for key in ('query', 'question', 'prompt', 'messages'):
+                        if key in row:
+                            val = row[key]
+                            return f'{key}={str(val)[:120]!r}'
+                    return f'keys={list(row.keys())}'
+
+                logger.info(f'[ORDER_DEBUG] len={len(train_dataset)} '
+                            f'features={list(train_dataset.features.keys()) if hasattr(train_dataset, "features") else "?"}')
+                logger.info(f'[ORDER_DEBUG] row0: {_peek(row0)}')
+                logger.info(f'[ORDER_DEBUG] row1: {_peek(row1)}')
+                logger.info(f'[ORDER_DEBUG] row2: {_peek(row2)}')
+            except Exception as e:
+                logger.info(f'[ORDER_DEBUG] failed to peek dataset rows: {e}')
         if len(args.val_dataset) > 0:
             # Loading val dataset
             dataset_kwargs.pop('interleave_prob', None)
