@@ -216,6 +216,7 @@ run_training \
         --logging_steps 1 \
         --load_from_cache_file true \
         --train_dataloader_shuffle false \
+        --dataset_shuffle=false \
         --data_seed 42 \
         --use_vllm true \
         --vllm_mode colocate \
